@@ -137,6 +137,54 @@ A scratchpad. Don't expect coherence.
   feared. The dread is the bug. Fixing it takes ten minutes.
 EOF
 
+cat > "$TARGET/projects/odett/snippets.md" <<'EOF'
+# Useful snippets
+
+## Go: simple HTTP server
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "hello, world")
+	})
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+## Python: read a JSON file
+
+```python
+import json
+from pathlib import Path
+
+def load(path: str) -> dict:
+    """Read a JSON file and return its parsed contents."""
+    with Path(path).open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+if __name__ == "__main__":
+    print(load("data.json"))
+```
+
+## A no-language fence — should auto-detect
+
+```
+SELECT id, name, created_at
+FROM users
+WHERE last_seen_at > NOW() - INTERVAL '7 days'
+ORDER BY created_at DESC
+LIMIT 100;
+```
+EOF
+
 cat > "$TARGET/projects/odett/launch-checklist.md" <<'EOF'
 # Odett alpha launch checklist
 

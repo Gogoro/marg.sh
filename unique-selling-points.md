@@ -20,6 +20,10 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 
 - **Vim modal keys *and* arrow keys both work, in every mode.** Most modal editors force a choice; marg lets a vim user do `dd` and a non-vim user press `delete` on the same line.
 
+## Real syntax highlighting inside fenced code blocks
+
+- **Code in markdown gets the full Chroma highlighter treatment.** ` ```go ` colors keywords, strings, comments, function names. Blocks without a language tag are auto-detected. Most TUI markdown editors color the fenced block uniformly green; marg actually parses the code.
+
 ## Markdown-native edit shortcuts
 
 - **`*` / `_` / `` ` `` in visual mode wrap the selection in `**bold**`, `_italic_`, `` `code` ``.** No surround-plugin to install. The keys you'd reach for already do the right thing.

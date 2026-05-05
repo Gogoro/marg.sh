@@ -82,6 +82,14 @@ Headings, blockquotes, sub-headings, bullet lists, **bold**, *italic*, `inline c
   <img src="assets/screenshots/markdown-styling.png" alt="a launch checklist styled with heading, blockquote and bullets" width="900"/>
 </p>
 
+### code blocks
+
+Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax highlighting via [Chroma](https://github.com/alecthomas/chroma) — keywords, strings, comments, numbers, function names, all colored. Blocks without a language tag are auto-detected when Chroma is confident; otherwise they render as plain text.
+
+<p align="center">
+  <img src="assets/screenshots/code-highlight.png" alt="syntax-highlighted Go and Python code blocks inside a markdown file" width="900"/>
+</p>
+
 ### visual selection
 
 `v` for character selection, `V` for line selection. Extend with any motion, then `y` to yank, `d`/`x` to cut, `p` to replace.

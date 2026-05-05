@@ -1284,6 +1284,7 @@ func (e *editor) view() string {
 	}
 	visuals := e.allVisualLines()
 	cursorIdx := e.cursorVisualIndex(visuals)
+	codeSpans := e.scanCodeBlocks()
 
 	rows := make([]string, 0, e.height)
 	end := e.scroll + e.height
@@ -1293,7 +1294,7 @@ func (e *editor) view() string {
 	for i := e.scroll; i < end; i++ {
 		v := visuals[i]
 		isCursorLine := i == cursorIdx
-		rows = append(rows, e.renderVisualLine(v, isCursorLine))
+		rows = append(rows, e.renderVisualLine(v, isCursorLine, codeSpans))
 	}
 	// Pad to fill height.
 	for len(rows) < e.height {
@@ -1302,10 +1303,21 @@ func (e *editor) view() string {
 	return strings.Join(rows, "\n")
 }
 
-func (e *editor) renderVisualLine(v visualLine, hasCursor bool) string {
+func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSpans) string {
 	line := e.buf.line(v.row)
-	base := baseStyleForLine(line)
-	inlines := inlineRanges(line)
+	inCode := code.inCode[v.row]
+	codeRowSpans := code.spans[v.row]
+
+	var base lipgloss.Style
+	var inlines []inlineRange
+	if inCode {
+		// Inside (or on the fence of) a fenced code block: use Chroma's
+		// per-token coloring as the base; skip markdown inline parsing.
+		base = baseStyleForLine(line)
+	} else {
+		base = baseStyleForLine(line)
+		inlines = inlineRanges(line)
+	}
 	searchMatches := findMatchesInLine(line, e.lastSearch)
 
 	cursorRel := -1
@@ -1335,11 +1347,16 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool) string {
 	segLen := v.endCol - v.startCol
 	for i := 0; i < segLen; i++ {
 		col := v.startCol + i
-		s := base
-		for _, ir := range inlines {
-			if col >= ir.start && col < ir.end {
-				s = ir.style
-				break
+		var s lipgloss.Style
+		if inCode && len(codeRowSpans) > 0 {
+			s = styleAtCol(codeRowSpans, col, base)
+		} else {
+			s = base
+			for _, ir := range inlines {
+				if col >= ir.start && col < ir.end {
+					s = ir.style
+					break
+				}
 			}
 		}
 		if e.isSelected(v.row, col) {
