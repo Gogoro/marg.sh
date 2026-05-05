@@ -46,3 +46,7 @@ If you remove a feature, remove its bullet. The list should always reflect what 
 ## commit messages
 
 Short, lowercase, no conventional-commit prefix. Match the iniva style: `add max_width config`, `fix soft-wrap on empty line`, `wire up dd and yy`.
+
+
+## Todos
+Make sure to remind me about the `todos.md` file. There we have big and small things we should attack. 
