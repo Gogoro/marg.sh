@@ -4,3 +4,4 @@
 - [ ]  / for search in the Ex mode.
 - [ ] Make the markdown show in the center of the screen. Much better feeling on large screens with focus on one file. Make it feel like a genuinly nice expiernece for the user.
 - [ ] Markdown syntax highlighting that also includes code snippets (auto detect would be nice)
+- [ ] Center the text part to the mid of the screen. So its nice to view/edit text on big screens. Instead of from the left side. If possible.

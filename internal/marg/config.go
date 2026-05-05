@@ -27,6 +27,11 @@ type Config struct {
 	// every walk on top of the built-in defaults (node_modules, go, Library,
 	// etc.). Useful for personal noisy folders.
 	IgnoreDirs []string
+
+	// IncludeDirs lists directory basenames that should ALWAYS be searched
+	// even when default rules would skip them — typically dot-prefixed dirs
+	// like `.claude` or `.obsidian` that contain notes worth opening.
+	IncludeDirs []string
 }
 
 func defaultConfig() Config {
@@ -69,6 +74,8 @@ func loadConfig() Config {
 			}
 		case "ignore_dirs":
 			cfg.IgnoreDirs = parseStringList(value)
+		case "include_dirs":
+			cfg.IncludeDirs = parseStringList(value)
 		}
 	}
 	return cfg

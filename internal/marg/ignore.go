@@ -24,10 +24,16 @@ var defaultIgnoreDirs = []string{
 // from `ignore_dirs` in config. Updated once at startup.
 var ignoreDirs = ignoreSetFrom(defaultIgnoreDirs, nil)
 
-// applyIgnoreConfig is called by Run after the config loads, so the user's
-// extra ignore entries are honored everywhere we check.
-func applyIgnoreConfig(extra []string) {
-	ignoreDirs = ignoreSetFrom(defaultIgnoreDirs, extra)
+// includeDirs lists directory basenames that should ALWAYS be searched even
+// when they would normally be filtered out (e.g. dot-prefixed dirs like
+// `.claude` or `.obsidian`). Populated from `include_dirs` in config.
+var includeDirs []string
+
+// applyDirConfig is called by Run after the config loads to apply both the
+// user's ignore additions and their include-list overrides everywhere.
+func applyDirConfig(extraIgnore, extraInclude []string) {
+	ignoreDirs = ignoreSetFrom(defaultIgnoreDirs, extraIgnore)
+	includeDirs = append([]string{}, extraInclude...)
 }
 
 func ignoreSetFrom(base, extra []string) map[string]bool {
@@ -57,4 +63,8 @@ func ignoredDirList() []string {
 		out = append(out, d)
 	}
 	return out
+}
+
+func includeDirList() []string {
+	return includeDirs
 }

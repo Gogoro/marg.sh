@@ -182,6 +182,12 @@ super_roots = ["~"]
 # node_modules, go, Library, target, build, dist, Pods, Carthage,
 # DerivedData, coverage, Applications). Useful for personal noisy folders.
 ignore_dirs = ["Downloads", "Dropbox"]
+
+# Whitelisted directories that should be searched even though the default
+# rules would skip them — usually dot-prefixed dirs that contain notes.
+# marg only descends through visible, non-noise ancestors when looking
+# for these, so a `.claude` inside `node_modules` won't be surfaced.
+include_dirs = [".claude", ".obsidian"]
 ```
 
 ### `max_width` in action
