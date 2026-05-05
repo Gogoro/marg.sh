@@ -22,6 +22,11 @@ type Config struct {
 	// arguments. Defaults to the user's home directory; can be set to one or
 	// more absolute paths or `~`-prefixed paths.
 	SuperRoots []string
+
+	// IgnoreDirs are extra directory basenames the user wants excluded from
+	// every walk on top of the built-in defaults (node_modules, go, Library,
+	// etc.). Useful for personal noisy folders.
+	IgnoreDirs []string
 }
 
 func defaultConfig() Config {
@@ -62,6 +67,8 @@ func loadConfig() Config {
 			if roots := parseRootList(value); len(roots) > 0 {
 				cfg.SuperRoots = roots
 			}
+		case "ignore_dirs":
+			cfg.IgnoreDirs = parseStringList(value)
 		}
 	}
 	return cfg
@@ -71,22 +78,30 @@ func loadConfig() Config {
 // and returns each entry, stripped of quotes and with `~` expanded to the
 // user's home directory.
 func parseRootList(value string) []string {
+	home, _ := os.UserHomeDir()
+	out := parseStringList(value)
+	for i, p := range out {
+		if home != "" && (p == "~" || strings.HasPrefix(p, "~/")) {
+			out[i] = home + p[1:]
+		}
+	}
+	return out
+}
+
+// parseStringList accepts a TOML-style array of strings and returns each
+// entry trimmed of quotes and whitespace. Empty entries are dropped.
+func parseStringList(value string) []string {
 	value = strings.TrimSpace(value)
 	value = strings.TrimPrefix(value, "[")
 	value = strings.TrimSuffix(value, "]")
 	parts := strings.Split(value, ",")
-	home, _ := os.UserHomeDir()
 	var out []string
 	for _, p := range parts {
 		p = strings.TrimSpace(p)
 		p = strings.Trim(p, `"'`)
-		if p == "" {
-			continue
+		if p != "" {
+			out = append(out, p)
 		}
-		if home != "" && (p == "~" || strings.HasPrefix(p, "~/")) {
-			p = home + p[1:]
-		}
-		out = append(out, p)
 	}
 	return out
 }

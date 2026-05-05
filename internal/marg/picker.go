@@ -325,19 +325,6 @@ func subsequenceMatch(s, query string) bool {
 	return true
 }
 
-// noiseDirs lists directory names we always skip when walking for markdown
-// files. These show up in $HOME / project trees but never contain notes
-// worth opening.
-var noiseDirs = map[string]bool{
-	"node_modules":  true,
-	"vendor":        true,
-	"target":        true,
-	"build":         true,
-	"dist":          true,
-	"Library":       true,
-	"Applications":  true,
-}
-
 func collectMarkdownFiles(root string) []string {
 	var out []string
 	filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
@@ -346,7 +333,7 @@ func collectMarkdownFiles(root string) []string {
 		}
 		name := filepath.Base(p)
 		if d.IsDir() {
-			if p != root && (strings.HasPrefix(name, ".") || noiseDirs[name]) {
+			if p != root && (strings.HasPrefix(name, ".") || isIgnoredDir(name)) {
 				return filepath.SkipDir
 			}
 			return nil

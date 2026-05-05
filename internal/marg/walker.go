@@ -39,15 +39,11 @@ func walkWithFd(bin string, roots []string) ([]string, error) {
 		"--type", "f",
 		"--extension", "md",
 		"--extension", "markdown",
-		"--exclude", "node_modules",
-		"--exclude", "vendor",
-		"--exclude", "Library",
-		"--exclude", "Applications",
-		"--exclude", "target",
-		"--exclude", "build",
-		"--exclude", "dist",
-		".",
 	}
+	for _, d := range ignoredDirList() {
+		args = append(args, "--exclude", d)
+	}
+	args = append(args, ".")
 	args = append(args, roots...)
 	out, err := exec.Command(bin, args...).Output()
 	if err != nil {
@@ -60,13 +56,9 @@ func walkWithRg(bin string, roots []string) ([]string, error) {
 	args := []string{
 		"--files",
 		"--type", "md",
-		"--glob", "!node_modules",
-		"--glob", "!vendor",
-		"--glob", "!Library",
-		"--glob", "!Applications",
-		"--glob", "!target",
-		"--glob", "!build",
-		"--glob", "!dist",
+	}
+	for _, d := range ignoredDirList() {
+		args = append(args, "--glob", "!"+d)
 	}
 	args = append(args, roots...)
 	out, err := exec.Command(bin, args...).Output()

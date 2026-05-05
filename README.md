@@ -177,6 +177,11 @@ max_width = 80
 # Where super mode (running `marg` with no args) walks for markdown files.
 # Defaults to your home directory. Use `~` for HOME, or any absolute path.
 super_roots = ["~"]
+
+# Extra directory basenames to skip (added to the built-in defaults like
+# node_modules, go, Library, target, build, dist, Pods, Carthage,
+# DerivedData, coverage, Applications). Useful for personal noisy folders.
+ignore_dirs = ["Downloads", "Dropbox"]
 ```
 
 ### `max_width` in action

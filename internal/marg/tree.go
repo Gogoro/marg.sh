@@ -589,7 +589,7 @@ func dirContainsMarkdown(dir string) bool {
 		}
 		name := filepath.Base(p)
 		if d != nil && d.IsDir() {
-			if p != dir && (strings.HasPrefix(name, ".") || noiseDirs[name]) {
+			if p != dir && (strings.HasPrefix(name, ".") || isIgnoredDir(name)) {
 				return filepath.SkipDir
 			}
 			return nil

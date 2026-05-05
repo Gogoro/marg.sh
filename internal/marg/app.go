@@ -15,6 +15,7 @@ func Run(args []string) error {
 	}
 
 	cfg := loadConfig()
+	applyIgnoreConfig(cfg.IgnoreDirs)
 	root, err := initialModel(target, cfg)
 	if err != nil {
 		return err
