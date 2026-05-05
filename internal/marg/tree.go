@@ -67,6 +67,13 @@ func newTree(root string) tree {
 	return t
 }
 
+// newTreeLazy is for super mode: same root, but the initial walk is
+// deferred until the user actually opens `:Ex`. Walking $HOME eagerly was
+// adding 10+ seconds of wall time before the picker could render.
+func newTreeLazy(root string) tree {
+	return tree{root: root, expanded: map[string]bool{root: true}}
+}
+
 func (t *tree) refresh() {
 	t.nodes = walkMarkdown(t.root, t.expanded)
 	if t.cursor >= len(t.nodes) {
@@ -577,18 +584,19 @@ func walkMarkdown(root string, expanded map[string]bool) []treeNode {
 func dirContainsMarkdown(dir string) bool {
 	found := false
 	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || found {
+		if err != nil {
 			return nil
 		}
 		name := filepath.Base(p)
-		if strings.HasPrefix(name, ".") && p != dir {
-			if d != nil && d.IsDir() {
+		if d != nil && d.IsDir() {
+			if p != dir && (strings.HasPrefix(name, ".") || noiseDirs[name]) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if d != nil && !d.IsDir() && isMarkdownPath(name) {
+		if !d.IsDir() && isMarkdownPath(name) {
 			found = true
+			return filepath.SkipAll
 		}
 		return nil
 	})

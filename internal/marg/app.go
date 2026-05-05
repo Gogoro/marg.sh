@@ -86,14 +86,14 @@ func initialModel(target startTarget, cfg Config) (app, error) {
 		a.view = viewEditor
 	case targetSuper:
 		// No specific project; the editor sits idle until a file is picked.
-		// Use HOME as a fallback root for the file tree if the user later
-		// wants `:Ex`.
+		// The tree is built lazily on first :Ex — eagerly walking $HOME
+		// would block the picker for many seconds.
 		fallback := home
 		if fallback == "" {
 			fallback, _ = os.Getwd()
 		}
 		a.projectRoot = fallback
-		a.tree = newTree(fallback)
+		a.tree = newTreeLazy(fallback)
 		a.editor = newEditor("")
 		a.view = viewEditor
 	}
