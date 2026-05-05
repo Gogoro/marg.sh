@@ -4,8 +4,10 @@ import "github.com/charmbracelet/lipgloss"
 
 // One restrained palette. Adjust here, nowhere else.
 var (
-	colorAccent    = lipgloss.Color("#7AA2F7") // soft blue
-	colorSelection = lipgloss.Color("#3B4252")
+	colorAccent     = lipgloss.Color("#7AA2F7") // soft blue
+	colorSelection  = lipgloss.Color("#3B4252")
+	colorTreeCursor = lipgloss.Color("#585B70") // brighter than dim, clearly highlights the row
+	colorMatch      = lipgloss.Color("#735C00") // muted amber for search matches
 	colorMuted   = lipgloss.Color("#5C6370")
 	colorDim     = lipgloss.Color("#3B4048")
 	colorText    = lipgloss.Color("#C8CCD4")
@@ -49,7 +51,7 @@ var (
 
 	styleTreeFolder = lipgloss.NewStyle().Foreground(colorAccent)
 	styleTreeFile   = lipgloss.NewStyle().Foreground(colorText)
-	styleTreeCursor = lipgloss.NewStyle().Foreground(colorText).Background(colorDim)
+	styleTreeCursor = lipgloss.NewStyle().Foreground(colorText).Background(colorTreeCursor).Bold(true)
 
 	stylePickerBox = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

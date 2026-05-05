@@ -10,13 +10,21 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 
 ## Markdown-aware, terminal-native navigation
 
+- **Super mode (`marg` with no args).** Drops you straight into a fuzzy picker over every `.md` file under `super_roots` (defaults to `$HOME`). Cross-project navigation in 2 keystrokes — type `marg` from any terminal, `roa` for "roadmap", enter. No editor I know of treats your machine-wide notes vault as a first-class search target.
 - **Markdown-only file tree.** `:Ex` walks recursively but hides folders that contain no `.md` files. Your notes vault is the whole tree; the build artifacts and config files don't get in the way.
+- **`/` filter inside the file tree.** Live substring narrow over the whole tree (across all unexpanded folders too). Most terminal trees make you toggle into a separate "find file" command; in marg it's just `/`.
 - **VS Code-style fuzzy picker (`ctrl+p`) inside a TUI.** Centered modal, hierarchical sort, subsequence match. Most terminal editors make you install a plugin for this; in marg it's the default and the only file picker.
-- **One tool that opens a folder *or* a single file.** `marg`, `marg ./notes`, `marg foo.md`, even `marg new-file.md` (creates it). No "set up a workspace first" step.
+- **One tool that opens nothing, a folder, or a single file.** `marg`, `marg ./notes`, `marg foo.md`, even `marg new-file.md` (creates it). No "set up a workspace first" step.
 
 ## Keybindings that bridge two audiences
 
 - **Vim modal keys *and* arrow keys both work, in every mode.** Most modal editors force a choice; marg lets a vim user do `dd` and a non-vim user press `delete` on the same line.
+
+## Markdown-native edit shortcuts
+
+- **`*` / `_` / `` ` `` in visual mode wrap the selection in `**bold**`, `_italic_`, `` `code` ``.** No surround-plugin to install. The keys you'd reach for already do the right thing.
+- **`:H1` … `:H6` (and `:H0` to remove) toggle the current line's heading level**, preserving indentation. Most editors make you select-the-line-and-prepend manually.
+- **List continuation on Enter** carries `-`, `*`, `+`, or auto-incremented numbered bullets. Pressing Enter on an empty bullet exits the list cleanly. Standard in GUI editors; rare in TUIs.
 
 ## Built for the dictation + AI workflow
 

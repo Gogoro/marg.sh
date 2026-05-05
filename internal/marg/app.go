@@ -47,6 +47,11 @@ type app struct {
 
 	cfg Config
 
+	// superMode means marg was launched without arguments — `ctrl+p` should
+	// reopen the super-mode index (machine-wide markdown) instead of the
+	// project-scoped picker.
+	superMode bool
+
 	view    view
 	editor  editor
 	tree    tree
@@ -61,6 +66,8 @@ type app struct {
 
 func initialModel(target startTarget, cfg Config) (app, error) {
 	a := app{cfg: cfg}
+
+	home, _ := os.UserHomeDir()
 
 	switch target.kind {
 	case targetDir:
@@ -77,10 +84,27 @@ func initialModel(target startTarget, cfg Config) (app, error) {
 		}
 		a.editor = ed
 		a.view = viewEditor
+	case targetSuper:
+		// No specific project; the editor sits idle until a file is picked.
+		// Use HOME as a fallback root for the file tree if the user later
+		// wants `:Ex`.
+		fallback := home
+		if fallback == "" {
+			fallback, _ = os.Getwd()
+		}
+		a.projectRoot = fallback
+		a.tree = newTree(fallback)
+		a.editor = newEditor("")
+		a.view = viewEditor
 	}
 
 	a.editor.maxWidth = cfg.MaxWidth
 	a.picker = newPicker()
+	if target.kind == targetSuper {
+		a.superMode = true
+		a.picker.openSuper(cfg.SuperRoots)
+		a.picking = true
+	}
 	return a, nil
 }
 
@@ -100,6 +124,10 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case statusMsg:
 		a.statusMessage = string(m)
+		return a, nil
+
+	case flashTickMsg:
+		a.editor = a.editor.onFlashTick(m.gen)
 		return a, nil
 
 	case openFileMsg:
@@ -185,7 +213,11 @@ func (a *app) handleGlobalKey(m tea.KeyMsg) (bool, tea.Model, tea.Cmd) {
 	}
 	switch m.String() {
 	case "ctrl+p":
-		a.picker.open(a.projectRoot)
+		if a.superMode {
+			a.picker.openSuper(a.cfg.SuperRoots)
+		} else {
+			a.picker.open(a.projectRoot)
+		}
 		a.picker.resize(a.width, a.height)
 		a.picking = true
 		return true, *a, nil

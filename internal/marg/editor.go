@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,6 +20,7 @@ const (
 	modeCommand
 	modeVisual
 	modeVisualLine
+	modeSearch
 )
 
 // register holds the most recently yanked or deleted text. lineWise indicates
@@ -58,6 +60,12 @@ type editor struct {
 	// command-mode line state (`:` prefix).
 	cmdInput string
 
+	// search state. searchInput is the in-flight query while typing in
+	// modeSearch; lastSearch is the last committed query that `n` / `N`
+	// repeat against.
+	searchInput string
+	lastSearch  string
+
 	// pendingKey holds a buffered prefix for two-key motions like `gg`,
 	// `dd`, `yy`.
 	pendingKey string
@@ -69,16 +77,33 @@ type editor struct {
 	anchorRow int
 	anchorCol int
 
+	// Undo / redo history. history[historyIdx] is the current state.
+	history    []snapshot
+	historyIdx int
+
+	// insertSnapshot is the state captured when the user entered insert mode.
+	// It's compared against the buffer on exit so a no-op insert session
+	// doesn't add a redundant history entry.
+	insertSnapshot snapshot
+
 	// Flags inspected by the root model after Update.
 	openTreeRequested bool
 	quitRequested     bool
 
 	// transient one-shot status (e.g. "saved").
-	flash string
+	flash    string
+	flashGen int
 }
 
+// flashTickMsg is delivered by a tea.Tick a couple of seconds after a flash
+// was set, so the status bar can clear itself even if the user doesn't press
+// another key.
+type flashTickMsg struct{ gen int }
+
 func newEditor(path string) editor {
-	return editor{filepath: path, buf: newBuffer(), mode: modeNormal}
+	e := editor{filepath: path, buf: newBuffer(), mode: modeNormal}
+	e.initHistory()
+	return e
 }
 
 func loadEditor(path string) (editor, error) {
@@ -86,7 +111,9 @@ func loadEditor(path string) (editor, error) {
 	if err != nil {
 		return editor{}, err
 	}
-	return editor{filepath: path, buf: buf, mode: modeNormal}, nil
+	e := editor{filepath: path, buf: buf, mode: modeNormal}
+	e.initHistory()
+	return e, nil
 }
 
 func (e *editor) resize(w, h int) {
@@ -99,17 +126,46 @@ func (e *editor) resize(w, h int) {
 
 func (e editor) update(msg tea.KeyMsg) (editor, tea.Cmd) {
 	e.flash = ""
+	var (
+		next editor
+		cmd  tea.Cmd
+	)
 	switch e.mode {
 	case modeNormal:
-		return e.updateNormal(msg)
+		next, cmd = e.updateNormal(msg)
 	case modeInsert:
-		return e.updateInsert(msg)
+		next, cmd = e.updateInsert(msg)
 	case modeCommand:
-		return e.updateCommand(msg)
+		next, cmd = e.updateCommand(msg)
 	case modeVisual, modeVisualLine:
-		return e.updateVisual(msg)
+		next, cmd = e.updateVisual(msg)
+	case modeSearch:
+		next, cmd = e.updateSearch(msg)
+	default:
+		return e, nil
 	}
-	return e, nil
+	if next.flash != "" {
+		next.flashGen++
+		gen := next.flashGen
+		clear := tea.Tick(2*time.Second, func(time.Time) tea.Msg {
+			return flashTickMsg{gen: gen}
+		})
+		if cmd != nil {
+			cmd = tea.Batch(cmd, clear)
+		} else {
+			cmd = clear
+		}
+	}
+	return next, cmd
+}
+
+// onFlashTick is called by the root model with the gen of an expiring
+// timer. If the editor's gen still matches, the flash is cleared.
+func (e editor) onFlashTick(gen int) editor {
+	if e.flashGen == gen {
+		e.flash = ""
+	}
+	return e
 }
 
 func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
@@ -131,6 +187,7 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 			e.yankCurrentLine()
 			e.deleteCurrentLine()
 			e.dirty = true
+			e.recordChange()
 			e.clampCursor()
 			e.scrollToCursor()
 			return e, nil
@@ -143,6 +200,11 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 	}
 
 	switch key {
+	case "esc":
+		// Discard any half-typed sequence so it doesn't lurk waiting for
+		// the next key.
+		e.pendingKey = ""
+		e.flash = ""
 	// motions
 	case "h", "left":
 		e.moveLeft()
@@ -182,23 +244,25 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 
 	// mode switches
 	case "i":
-		e.mode = modeInsert
+		e.enterInsertMode()
 	case "a":
 		e.col = min(e.col+1, e.buf.lineLen(e.row))
-		e.mode = modeInsert
+		e.enterInsertMode()
 	case "I":
 		e.col = firstNonBlank(e.buf.line(e.row))
-		e.mode = modeInsert
+		e.enterInsertMode()
 	case "A":
 		e.col = e.buf.lineLen(e.row)
-		e.mode = modeInsert
+		e.enterInsertMode()
 	case "o":
+		e.insertSnapshot = e.captureSnapshot()
 		e.buf.insertLineBelow(e.row)
 		e.row++
 		e.col = 0
 		e.mode = modeInsert
 		e.dirty = true
 	case "O":
+		e.insertSnapshot = e.captureSnapshot()
 		e.buf.insertLineAbove(e.row)
 		e.col = 0
 		e.mode = modeInsert
@@ -208,6 +272,7 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 	case "x":
 		e.row, e.col = e.buf.deleteRuneAt(e.row, e.col)
 		e.dirty = true
+		e.recordChange()
 	case "d":
 		e.pendingKey = "d"
 	case "y":
@@ -218,8 +283,22 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.flash = "1 line yanked"
 	case "p":
 		e.pasteAfterCursor()
+		e.recordChange()
 	case "P":
 		e.pasteBeforeCursor()
+		e.recordChange()
+	case "u":
+		if e.undo() {
+			e.flash = "undo"
+		} else {
+			e.flash = "already at oldest change"
+		}
+	case "ctrl+r":
+		if e.redo() {
+			e.flash = "redo"
+		} else {
+			e.flash = "already at newest change"
+		}
 	case "v":
 		e.mode = modeVisual
 		e.anchorRow = e.row
@@ -233,6 +312,35 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 	case ":":
 		e.mode = modeCommand
 		e.cmdInput = ""
+
+	// search
+	case "/":
+		e.mode = modeSearch
+		e.searchInput = ""
+	case "n":
+		if e.lastSearch == "" {
+			e.flash = "no recent search"
+		} else if r, c, ok, wrapped := e.findNextMatch(e.row, e.col, e.lastSearch, true); ok {
+			e.row, e.col = r, c
+			e.preferredCol = c
+			if wrapped {
+				e.flash = "search hit BOTTOM, continuing at TOP"
+			}
+		} else {
+			e.flash = "pattern not found: " + e.lastSearch
+		}
+	case "N":
+		if e.lastSearch == "" {
+			e.flash = "no recent search"
+		} else if r, c, ok, wrapped := e.findNextMatch(e.row, e.col, e.lastSearch, false); ok {
+			e.row, e.col = r, c
+			e.preferredCol = c
+			if wrapped {
+				e.flash = "search hit TOP, continuing at BOTTOM"
+			}
+		} else {
+			e.flash = "pattern not found: " + e.lastSearch
+		}
 
 	// save
 	case "ctrl+s":
@@ -260,6 +368,11 @@ func (e editor) updateInsert(msg tea.KeyMsg) (editor, tea.Cmd) {
 			e.col--
 		}
 		e.preferredCol = e.col
+		// Record an undo entry for the whole insert session if it changed
+		// the buffer.
+		if !snapshotsEqual(e.insertSnapshot, e.captureSnapshot()) {
+			e.recordChange()
+		}
 	case "left":
 		e.moveLeft()
 	case "right":
@@ -286,6 +399,30 @@ func (e editor) updateInsert(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.row, e.col = e.buf.deleteRuneAt(e.row, e.col)
 		e.dirty = true
 	case "enter":
+		// Markdown list continuation: pressing Enter at the end of a
+		// list item carries the bullet (or auto-incremented number) onto
+		// the new line. An empty list item exits the list cleanly.
+		line := e.buf.line(e.row)
+		if info, ok := parseListLine(line); ok && e.col == len(line) {
+			rest := strings.TrimSpace(string(line[info.prefixRunes:]))
+			if rest == "" {
+				e.buf.lines[e.row] = []rune{}
+				e.buf.insertNewline(e.row, 0)
+				e.row++
+				e.col = 0
+				e.dirty = true
+				break
+			}
+			e.buf.insertNewline(e.row, e.col)
+			e.row++
+			e.col = 0
+			for _, r := range info.nextPrefix {
+				e.buf.insertRune(e.row, e.col, r)
+				e.col++
+			}
+			e.dirty = true
+			break
+		}
 		e.buf.insertNewline(e.row, e.col)
 		e.row++
 		e.col = 0
@@ -359,7 +496,7 @@ func (e editor) updateVisual(msg tea.KeyMsg) (editor, tea.Cmd) {
 	case "0", "home":
 		e.col = 0
 		e.preferredCol = 0
-	case "_", "^":
+	case "^":
 		e.col = firstNonBlank(e.buf.line(e.row))
 		e.preferredCol = e.col
 	case "$", "end":
@@ -394,12 +531,20 @@ func (e editor) updateVisual(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.deleteSelection()
 		e.dirty = true
 		e.mode = modeNormal
+		e.recordChange()
 	case "p":
 		// Replace selection with register contents.
 		e.deleteSelection()
 		e.pasteHere()
 		e.dirty = true
 		e.mode = modeNormal
+		e.recordChange()
+	case "*":
+		e.wrapSelection("**")
+	case "`":
+		e.wrapSelection("`")
+	case "_":
+		e.wrapSelection("_")
 	}
 
 	e.clampCursor()
@@ -458,8 +603,62 @@ func (e *editor) runCommand(cmd string) tea.Cmd {
 		e.openTreeRequested = true
 		return nil
 	}
+	if len(cmd) == 2 && cmd[0] == 'H' && cmd[1] >= '0' && cmd[1] <= '6' {
+		e.applyHeadingLevel(int(cmd[1] - '0'))
+		return nil
+	}
+	if strings.HasPrefix(cmd, "s/") {
+		e.runSubstitute(cmd[2:], e.row, e.row)
+		return nil
+	}
+	if strings.HasPrefix(cmd, "%s/") {
+		e.runSubstitute(cmd[3:], 0, e.buf.lineCount()-1)
+		return nil
+	}
 	e.flash = "unknown: :" + cmd
 	return nil
+}
+
+// runSubstitute handles :s/foo/bar/[g] and :%s/foo/bar/[g]. The argument
+// passed in is everything after the leading `s/` or `%s/`, so it looks like
+// `foo/bar` or `foo/bar/g`.
+func (e *editor) runSubstitute(arg string, startRow, endRow int) {
+	parts := strings.SplitN(arg, "/", 3)
+	if len(parts) < 2 {
+		e.flash = "usage: :s/find/replace[/g]"
+		return
+	}
+	find := parts[0]
+	replace := parts[1]
+	flags := ""
+	if len(parts) == 3 {
+		flags = parts[2]
+	}
+	if find == "" {
+		e.flash = "empty pattern"
+		return
+	}
+	count := -1
+	if !strings.Contains(flags, "g") {
+		count = 1
+	}
+	changed := 0
+	for r := startRow; r <= endRow && r < e.buf.lineCount(); r++ {
+		original := string(e.buf.line(r))
+		modified := strings.Replace(original, find, replace, count)
+		if modified != original {
+			e.buf.lines[r] = []rune(modified)
+			changed++
+		}
+	}
+	if changed == 0 {
+		e.flash = "pattern not found: " + find
+		return
+	}
+	e.dirty = true
+	e.clampCursor()
+	e.recordChange()
+	e.flash = fmt.Sprintf("substituted in %d line(s)", changed)
 }
 
 // --- save ---
@@ -674,6 +873,49 @@ func (e *editor) moveWordBackward() {
 	e.preferredCol = e.col
 }
 
+func (e editor) updateSearch(msg tea.KeyMsg) (editor, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		e.mode = modeNormal
+		e.searchInput = ""
+	case "enter":
+		e.lastSearch = e.searchInput
+		e.searchInput = ""
+		e.mode = modeNormal
+		if e.lastSearch != "" {
+			if r, c, ok, wrapped := e.findNextMatch(e.row, e.col, e.lastSearch, true); ok {
+				e.row, e.col = r, c
+				e.preferredCol = c
+				if wrapped {
+					e.flash = "search hit BOTTOM, continuing at TOP"
+				}
+			} else {
+				e.flash = "pattern not found: " + e.lastSearch
+			}
+		}
+	case "backspace":
+		if len(e.searchInput) > 0 {
+			e.searchInput = e.searchInput[:len(e.searchInput)-1]
+		} else {
+			e.mode = modeNormal
+		}
+	default:
+		if len(msg.Runes) > 0 {
+			e.searchInput += string(msg.Runes)
+		}
+	}
+	e.clampCursor()
+	e.scrollToCursor()
+	return e, nil
+}
+
+// enterInsertMode switches to insert and remembers the pre-insert state so
+// the whole session collapses into a single undo entry on exit.
+func (e *editor) enterInsertMode() {
+	e.insertSnapshot = e.captureSnapshot()
+	e.mode = modeInsert
+}
+
 // --- yank / delete / paste ---
 
 func (e *editor) yankCurrentLine() {
@@ -811,6 +1053,41 @@ func (e *editor) pasteHere() {
 	if nc > 0 {
 		e.col = nc - 1
 	}
+}
+
+// wrapSelection brackets the current visual-mode selection with `marker`
+// on each side (e.g. `**` for bold, `` ` `` for inline code). Visual-line
+// mode wraps the joined block but doesn't try to wrap each line individually.
+func (e *editor) wrapSelection(marker string) {
+	if e.mode != modeVisual && e.mode != modeVisualLine {
+		return
+	}
+	sr, sc, er, ec := e.selectionRange()
+	if e.mode == modeVisualLine {
+		// Prepend the marker to the first line; append to the last line.
+		mr := []rune(marker)
+		first := append([]rune{}, mr...)
+		first = append(first, e.buf.lines[sr]...)
+		e.buf.lines[sr] = first
+		e.buf.lines[er] = append(e.buf.lines[er], mr...)
+		e.row = er
+		e.col = e.buf.lineLen(er) - 1
+		if e.col < 0 {
+			e.col = 0
+		}
+	} else {
+		text := e.buf.textRange(sr, sc, er, ec)
+		nr, nc := e.buf.deleteRange(sr, sc, er, ec)
+		nr2, nc2 := e.buf.insertText(nr, nc, marker+text+marker)
+		e.row = nr2
+		e.col = nc2 - 1
+		if e.col < 0 {
+			e.col = 0
+		}
+	}
+	e.dirty = true
+	e.mode = modeNormal
+	e.recordChange()
 }
 
 // isSelected returns true if the rune at (row, col) is part of the current
@@ -1008,6 +1285,7 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool) string {
 	line := e.buf.line(v.row)
 	base := baseStyleForLine(line)
 	inlines := inlineRanges(line)
+	searchMatches := findMatchesInLine(line, e.lastSearch)
 
 	cursorRel := -1
 	if hasCursor {
@@ -1046,6 +1324,9 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool) string {
 		if e.isSelected(v.row, col) {
 			s = s.Background(colorSelection)
 		}
+		if isInRanges(col, searchMatches) {
+			s = s.Background(colorMatch)
+		}
 		if i == cursorRel {
 			s = cursorStyle
 		}
@@ -1082,6 +1363,9 @@ func (e *editor) statusBar(width int, transient string) string {
 	// Command-mode line replaces the normal status when active.
 	if e.mode == modeCommand {
 		return styleStatusBar.Render(":" + e.cmdInput + "_")
+	}
+	if e.mode == modeSearch {
+		return styleStatusBar.Render("/" + e.searchInput + "_")
 	}
 	if e.flash != "" {
 		return styleStatusBar.Render(e.flash)

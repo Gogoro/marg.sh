@@ -16,17 +16,14 @@ type startTarget struct {
 type targetKind int
 
 const (
-	targetDir  targetKind = iota // open the file tree on a directory
-	targetFile                   // open the editor on a file
+	targetDir   targetKind = iota // open the file tree on a directory
+	targetFile                    // open the editor on a file
+	targetSuper                   // launch into super-mode picker (no path)
 )
 
 func parseArgs(args []string) (startTarget, error) {
 	if len(args) == 0 {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return startTarget{}, err
-		}
-		return startTarget{kind: targetDir, path: cwd}, nil
+		return startTarget{kind: targetSuper}, nil
 	}
 
 	if len(args) > 1 {

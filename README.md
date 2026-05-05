@@ -31,11 +31,13 @@ Requires Go 1.24+.
 ## usage
 
 ```bash
-marg                  # open the file tree on the current directory
-marg .                # same
+marg                  # super mode: fuzzy-find any .md anywhere under super_roots (default: $HOME)
+marg .                # open the file tree on the current directory
 marg path/to/dir      # open the file tree on that directory
 marg path/to/file.md  # open that file directly
 ```
+
+Super mode is the fastest way to jump to any note across all your projects — `marg` from any terminal, type a few letters, hit enter.
 
 ### file tree
 
@@ -95,11 +97,13 @@ Headings, blockquotes, sub-headings, bullet lists, **bold**, *italic*, `inline c
 | `I` / `A`      | insert at line start / end            |
 | `o` / `O`      | open new line below / above           |
 | `x`            | delete char under cursor              |
+| `u` / `ctrl+r` | undo / redo                           |
 | `dd`           | cut (delete) current line             |
 | `yy` / `Y`     | yank (copy) current line              |
 | `p` / `P`      | paste after / before cursor (or below/above for line-wise) |
 | `v` / `V`      | visual / visual-line selection mode   |
-| `:`            | command line (`:w`, `:q`, `:wq`, `:Ex`) |
+| `/`            | search forward (then `n` / `N` to repeat) |
+| `:`            | command line (`:w`, `:q`, `:wq`, `:Ex`, `:H1..:H6`, `:s/…`, `:%s/…`) |
 | `ctrl+s`       | save                                  |
 
 ### editor — visual mode (`v` / `V`)
@@ -111,12 +115,17 @@ Move with motions to extend the selection. Then:
 | `y`            | yank selection                        |
 | `d` / `x`      | cut selection                         |
 | `p`            | replace selection with register       |
+| `*`            | wrap selection in `**bold**`          |
+| `_`            | wrap selection in `_italic_`          |
+| `` ` ``        | wrap selection in `` `code` ``        |
 | `esc`          | leave visual mode                     |
 
 ### editor — insert mode
 
 Type freely. Arrow keys, backspace, delete, enter, tab all behave naturally.
 `esc` returns to normal mode.
+
+Markdown list continuation: pressing Enter on a line that starts with `- `, `* `, `+ `, or `<n>. ` carries the bullet (or auto-incremented number) onto the new line. An empty bullet on Enter exits the list cleanly.
 
 ### file tree (`:Ex`)
 
@@ -129,8 +138,9 @@ Type freely. Arrow keys, backspace, delete, enter, tab all behave naturally.
 | `%`            | new file (creates `.md` if no ext)    |
 | `d`            | new directory                         |
 | `D`            | delete (with confirmation)            |
+| `/`            | filter tree (substring match across paths) |
 | `R`            | refresh                               |
-| `esc` / `q`    | back to editor (or quit if no file)   |
+| `esc` / `q`    | clear filter, then back to editor     |
 
 ### file picker (`ctrl+p`)
 
@@ -144,6 +154,10 @@ Optional config at `~/.config/marg/config.toml`. Format is `key = value` per lin
 # Cap the wrap width below the terminal width — useful in wide terminals
 # where prose otherwise stretches out into a horizontal blur.
 max_width = 80
+
+# Where super mode (running `marg` with no args) walks for markdown files.
+# Defaults to your home directory. Use `~` for HOME, or any absolute path.
+super_roots = ["~"]
 ```
 
 ### `max_width` in action

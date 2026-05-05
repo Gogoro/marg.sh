@@ -13,10 +13,12 @@ import (
 // picker is the Ctrl+P fuzzy file picker. Modal overlay; centered box; input
 // at bottom; list of matched files above sorted by hierarchical path.
 type picker struct {
-	root  string
-	all   []string // absolute paths of every markdown file under root
-	view  []string // paths matching current query, sorted hierarchically
-	query string
+	root       string   // single-root mode (project picker)
+	roots      []string // multi-root mode (super mode)
+	useTilde   bool     // when true, render paths under HOME with `~/`
+	all        []string // absolute paths of every markdown file under the roots
+	view       []string // paths matching current query, sorted hierarchically
+	query      string
 
 	cursor int
 	width  int
@@ -32,7 +34,24 @@ func newPicker() picker {
 
 func (p *picker) open(root string) {
 	p.root = root
+	p.roots = nil
+	p.useTilde = false
 	p.all = collectMarkdownFiles(root)
+	p.resetState()
+}
+
+func (p *picker) openSuper(roots []string) {
+	p.root = ""
+	p.roots = roots
+	p.useTilde = true
+	p.all = nil
+	for _, r := range roots {
+		p.all = append(p.all, collectMarkdownFiles(r)...)
+	}
+	p.resetState()
+}
+
+func (p *picker) resetState() {
 	p.query = ""
 	p.cursor = 0
 	p.cancelled = false
@@ -84,13 +103,12 @@ func (p *picker) applyQuery() {
 	} else {
 		p.view = nil
 		for _, path := range p.all {
-			rel := relPathLower(p.root, path)
-			if subsequenceMatch(rel, q) {
+			candidate := strings.ToLower(p.displayPath(path))
+			if subsequenceMatch(candidate, q) {
 				p.view = append(p.view, path)
 			}
 		}
 	}
-	// Hierarchical sort: by full relative path, lowercased.
 	sort.Slice(p.view, func(i, j int) bool {
 		return strings.ToLower(p.view[i]) < strings.ToLower(p.view[j])
 	})
@@ -100,6 +118,18 @@ func (p *picker) applyQuery() {
 	if p.cursor < 0 {
 		p.cursor = 0
 	}
+}
+
+// displayPath returns the user-visible form of path: relative to root when
+// the picker was opened on a single root, or `~/...` when in super mode.
+func (p *picker) displayPath(path string) string {
+	if p.useTilde {
+		if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(path, home+string(os.PathSeparator)) {
+			return "~" + path[len(home):]
+		}
+		return path
+	}
+	return relPath(p.root, path)
 }
 
 // overlay paints the picker box on top of the existing rendered view.
@@ -140,7 +170,7 @@ func (p *picker) overlay(below string) string {
 
 	var rows []string
 	for i := start; i < end; i++ {
-		rel := relPath(p.root, p.view[i])
+		rel := p.displayPath(p.view[i])
 		row := truncate(rel, boxW-2)
 		if i == p.cursor {
 			row = stylePickerCursor.Render(padRight(row, boxW-2))
@@ -237,15 +267,14 @@ func padRight(s string, w int) string {
 }
 
 func relPath(root, path string) string {
+	if root == "" {
+		return path
+	}
 	r, err := filepath.Rel(root, path)
 	if err != nil {
 		return path
 	}
 	return r
-}
-
-func relPathLower(root, path string) string {
-	return strings.ToLower(relPath(root, path))
 }
 
 // subsequenceMatch returns true if every rune of `query` appears in `s`
@@ -274,6 +303,19 @@ func subsequenceMatch(s, query string) bool {
 	return true
 }
 
+// noiseDirs lists directory names we always skip when walking for markdown
+// files. These show up in $HOME / project trees but never contain notes
+// worth opening.
+var noiseDirs = map[string]bool{
+	"node_modules":  true,
+	"vendor":        true,
+	"target":        true,
+	"build":         true,
+	"dist":          true,
+	"Library":       true,
+	"Applications":  true,
+}
+
 func collectMarkdownFiles(root string) []string {
 	var out []string
 	filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
@@ -281,13 +323,13 @@ func collectMarkdownFiles(root string) []string {
 			return nil
 		}
 		name := filepath.Base(p)
-		if strings.HasPrefix(name, ".") && p != root {
-			if d.IsDir() {
+		if d.IsDir() {
+			if p != root && (strings.HasPrefix(name, ".") || noiseDirs[name]) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if d.IsDir() {
+		if strings.HasPrefix(name, ".") {
 			return nil
 		}
 		if isMarkdownPath(name) {
