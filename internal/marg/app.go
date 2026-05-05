@@ -2,8 +2,11 @@ package marg
 
 import (
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
 
 // Run is the entrypoint called from main. Parses args, builds the initial
@@ -12,6 +15,15 @@ func Run(args []string) error {
 	target, err := parseArgs(args)
 	if err != nil {
 		return err
+	}
+
+	// Force truecolor when the terminal advertises it via COLORTERM. Inside
+	// tmux, lipgloss/termenv otherwise downsamples to the 256-color palette
+	// because TERM is `tmux-256color`, which makes themes like monokai look
+	// muddy.
+	colorterm := strings.ToLower(os.Getenv("COLORTERM"))
+	if colorterm == "truecolor" || colorterm == "24bit" {
+		lipgloss.SetColorProfile(termenv.TrueColor)
 	}
 
 	cfg := loadConfig()
