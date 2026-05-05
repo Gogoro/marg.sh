@@ -18,6 +18,11 @@ type Config struct {
 	// terminal but you want comfortable reading line lengths.
 	MaxWidth int
 
+	// CenterAbove is the terminal width at which the text block starts
+	// being horizontally centered. 0 disables centering entirely (text
+	// hugs the left edge). A typical value: 160.
+	CenterAbove int
+
 	// SuperRoots are the directories super mode walks when launched without
 	// arguments. Defaults to the user's home directory; can be set to one or
 	// more absolute paths or `~`-prefixed paths.
@@ -67,6 +72,10 @@ func loadConfig() Config {
 		case "max_width":
 			if n, err := strconv.Atoi(value); err == nil && n > 0 {
 				cfg.MaxWidth = n
+			}
+		case "center_above":
+			if n, err := strconv.Atoi(value); err == nil && n >= 0 {
+				cfg.CenterAbove = n
 			}
 		case "super_roots":
 			if roots := parseRootList(value); len(roots) > 0 {

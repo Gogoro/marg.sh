@@ -174,6 +174,11 @@ Optional config at `~/.config/marg/config.toml`. Format is `key = value` per lin
 # where prose otherwise stretches out into a horizontal blur.
 max_width = 80
 
+# Terminal width at which the text block starts being horizontally centered.
+# 0 disables centering (text hugs the left edge — default). A typical value
+# on a wide monitor: 160.
+center_above = 0
+
 # Where super mode (running `marg` with no args) walks for markdown files.
 # Defaults to your home directory. Use `~` for HOME, or any absolute path.
 super_roots = ["~"]

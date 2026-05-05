@@ -57,6 +57,10 @@ type editor struct {
 	// 0 means "no cap, use terminal width".
 	maxWidth int
 
+	// centerAbove is the terminal width at which the text block starts
+	// being horizontally centered. 0 disables centering.
+	centerAbove int
+
 	// command-mode line state (`:` prefix).
 	cmdInput string
 
@@ -1177,11 +1181,13 @@ func (e *editor) wrapWidth() int {
 }
 
 // leftMargin is the number of blank columns to the left of the text block.
-// When the terminal is wider than wrapWidth (typically because max_width is
-// set), the text is centered horizontally so it reads like a book column on
-// a big screen instead of clinging to the left edge.
+// Centering only kicks in once the terminal grows past `centerAbove`; below
+// that threshold the text stays left-aligned with a single-column gutter.
 func (e *editor) leftMargin() int {
 	if e.width <= 0 {
+		return 1
+	}
+	if e.centerAbove == 0 || e.width < e.centerAbove {
 		return 1
 	}
 	pad := (e.width - e.wrapWidth()) / 2
