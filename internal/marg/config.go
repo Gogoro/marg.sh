@@ -23,6 +23,11 @@ type Config struct {
 	// hugs the left edge). A typical value: 160.
 	CenterAbove int
 
+	// CodeTheme picks the Chroma style used for syntax-highlighted fenced
+	// code blocks. Any name from `chroma --list` works. Defaults to
+	// "monokai" (high-contrast, readable on dark terminals).
+	CodeTheme string
+
 	// SuperRoots are the directories super mode walks when launched without
 	// arguments. Defaults to the user's home directory; can be set to one or
 	// more absolute paths or `~`-prefixed paths.
@@ -40,7 +45,7 @@ type Config struct {
 }
 
 func defaultConfig() Config {
-	cfg := Config{MaxWidth: 0}
+	cfg := Config{MaxWidth: 0, CodeTheme: "monokai"}
 	if home, err := os.UserHomeDir(); err == nil {
 		cfg.SuperRoots = []string{home}
 	}
@@ -76,6 +81,10 @@ func loadConfig() Config {
 		case "center_above":
 			if n, err := strconv.Atoi(value); err == nil && n >= 0 {
 				cfg.CenterAbove = n
+			}
+		case "code_theme":
+			if value != "" {
+				cfg.CodeTheme = value
 			}
 		case "super_roots":
 			if roots := parseRootList(value); len(roots) > 0 {

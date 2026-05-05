@@ -24,16 +24,22 @@ type tokenSpan struct {
 	style    lipgloss.Style
 }
 
-// chromaStyle is the palette translated into lipgloss styles. We use Chroma's
-// "catppuccin-mocha" theme to stay consistent with the rest of the screen.
-var chromaStyle = mustLoadStyle("catppuccin-mocha")
+// chromaStyle is the active Chroma palette. setCodeTheme swaps it once at
+// startup based on the user's `code_theme` config.
+var chromaStyle = mustLoadStyle("monokai")
+
+func setCodeTheme(name string) {
+	chromaStyle = mustLoadStyle(name)
+}
 
 func mustLoadStyle(name string) *chroma.Style {
-	s := styles.Get(name)
-	if s == nil {
-		s = styles.Fallback
+	if s := styles.Get(name); s != nil {
+		return s
 	}
-	return s
+	if s := styles.Get("monokai"); s != nil {
+		return s
+	}
+	return styles.Fallback
 }
 
 // scanCodeBlocks walks the buffer, finds every ``` … ``` fenced block, and

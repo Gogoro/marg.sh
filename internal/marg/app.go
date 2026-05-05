@@ -16,6 +16,9 @@ func Run(args []string) error {
 
 	cfg := loadConfig()
 	applyDirConfig(cfg.IgnoreDirs, cfg.IncludeDirs)
+	if cfg.CodeTheme != "" {
+		setCodeTheme(cfg.CodeTheme)
+	}
 	root, err := initialModel(target, cfg)
 	if err != nil {
 		return err

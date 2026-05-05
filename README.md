@@ -187,6 +187,14 @@ max_width = 80
 # on a wide monitor: 160.
 center_above = 0
 
+# Chroma style used for syntax highlighting inside fenced code blocks.
+# Default: monokai. High-contrast, easy to read.
+# Other popular options:
+#   "dracula", "github-dark", "tokyo-night", "onedark", "gruvbox", "nord",
+#   "solarized-dark", "catppuccin-mocha", "rose-pine"
+# Full list: `chroma --list` (any chroma style name works).
+code_theme = "monokai"
+
 # Where super mode (running `marg` with no args) walks for markdown files.
 # Defaults to your home directory. Use `~` for HOME, or any absolute path.
 super_roots = ["~"]
