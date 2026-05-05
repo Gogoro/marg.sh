@@ -1176,6 +1176,21 @@ func (e *editor) wrapWidth() int {
 	return w
 }
 
+// leftMargin is the number of blank columns to the left of the text block.
+// When the terminal is wider than wrapWidth (typically because max_width is
+// set), the text is centered horizontally so it reads like a book column on
+// a big screen instead of clinging to the left edge.
+func (e *editor) leftMargin() int {
+	if e.width <= 0 {
+		return 1
+	}
+	pad := (e.width - e.wrapWidth()) / 2
+	if pad < 1 {
+		return 1
+	}
+	return pad
+}
+
 // wrapLine breaks one logical line into visual lines using word-aware wrap.
 func (e *editor) wrapLine(row int) []visualLine {
 	line := e.buf.line(row)
@@ -1349,7 +1364,7 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool) string {
 		b.WriteString(lipgloss.NewStyle().Background(colorSelection).Render(" "))
 	}
 
-	return " " + b.String()
+	return strings.Repeat(" ", e.leftMargin()) + b.String()
 }
 
 func (e *editor) statusBar(width int, transient string) string {
