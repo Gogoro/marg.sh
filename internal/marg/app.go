@@ -109,7 +109,22 @@ func initialModel(target startTarget, cfg Config) (app, error) {
 }
 
 func (a app) Init() tea.Cmd {
+	if a.superMode {
+		return indexCmd(a.cfg.SuperRoots)
+	}
 	return nil
+}
+
+// indexCmd kicks off a super-mode walk in the background. The result lands
+// as an indexResultMsg.
+func indexCmd(roots []string) tea.Cmd {
+	return func() tea.Msg {
+		return indexResultMsg{files: findMarkdownFiles(roots)}
+	}
+}
+
+type indexResultMsg struct {
+	files []string
 }
 
 func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -128,6 +143,10 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case flashTickMsg:
 		a.editor = a.editor.onFlashTick(m.gen)
+		return a, nil
+
+	case indexResultMsg:
+		a.picker.setIndex(m.files)
 		return a, nil
 
 	case openFileMsg:
@@ -213,14 +232,16 @@ func (a *app) handleGlobalKey(m tea.KeyMsg) (bool, tea.Model, tea.Cmd) {
 	}
 	switch m.String() {
 	case "ctrl+p":
+		var cmd tea.Cmd
 		if a.superMode {
 			a.picker.openSuper(a.cfg.SuperRoots)
+			cmd = indexCmd(a.cfg.SuperRoots)
 		} else {
 			a.picker.open(a.projectRoot)
 		}
 		a.picker.resize(a.width, a.height)
 		a.picking = true
-		return true, *a, nil
+		return true, *a, cmd
 	}
 	return false, *a, nil
 }

@@ -1,6 +1,7 @@
 package marg
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,6 +27,10 @@ type picker struct {
 
 	cancelled bool
 	chosen    string
+
+	// indexing is true while a super-mode walk is in flight. The picker
+	// renders an "indexing…" message until the index lands.
+	indexing bool
 }
 
 func newPicker() picker {
@@ -40,15 +45,23 @@ func (p *picker) open(root string) {
 	p.resetState()
 }
 
+// openSuper sets up the picker for super-mode but does NOT walk yet — that
+// happens asynchronously via indexCmd so the UI is responsive even on a
+// huge home directory.
 func (p *picker) openSuper(roots []string) {
 	p.root = ""
 	p.roots = roots
 	p.useTilde = true
 	p.all = nil
-	for _, r := range roots {
-		p.all = append(p.all, collectMarkdownFiles(r)...)
-	}
+	p.indexing = true
 	p.resetState()
+}
+
+// setIndex completes a super-mode walk and refreshes the visible list.
+func (p *picker) setIndex(files []string) {
+	p.all = files
+	p.indexing = false
+	p.applyQuery()
 }
 
 func (p *picker) resetState() {
@@ -169,6 +182,11 @@ func (p *picker) overlay(below string) string {
 	}
 
 	var rows []string
+	if p.indexing {
+		rows = append(rows, padRight("indexing…", boxW-2))
+	} else if len(p.view) == 0 && p.query == "" {
+		rows = append(rows, padRight("(no markdown files found)", boxW-2))
+	}
 	for i := start; i < end; i++ {
 		rel := p.displayPath(p.view[i])
 		row := truncate(rel, boxW-2)
@@ -183,7 +201,11 @@ func (p *picker) overlay(below string) string {
 		rows = append(rows, padRight("", boxW-2))
 	}
 
-	prompt := "› " + p.query + "_"
+	count := ""
+	if !p.indexing {
+		count = fmt.Sprintf("  %d", len(p.view))
+	}
+	prompt := "› " + p.query + "_" + count
 	prompt = padRight(prompt, boxW-2)
 
 	body := strings.Join(rows, "\n") + "\n" + lipgloss.NewStyle().Foreground(colorMuted).Render(strings.Repeat("─", boxW-2)) + "\n" + prompt

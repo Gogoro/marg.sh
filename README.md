@@ -28,6 +28,25 @@ mv marg ~/.local/bin/   # or anywhere on $PATH
 
 Requires Go 1.24+.
 
+### strongly recommended: install `fd` or `rg`
+
+Super mode (`marg` with no arguments) walks your home directory looking for every `.md` file. Without help, Go's built-in walker takes 10+ seconds across a real `$HOME`. With **`fd`** ([install](https://github.com/sharkdp/fd#installation)) or **`rg`** ([install](https://github.com/BurntSushi/ripgrep#installation)) on `$PATH`, marg shells out to whichever it finds first and the same walk takes about a second.
+
+```bash
+# macOS
+brew install fd            # preferred (a touch faster)
+# or:
+brew install ripgrep
+
+# Debian / Ubuntu
+sudo apt install fd-find ripgrep
+
+# Arch
+sudo pacman -S fd ripgrep
+```
+
+Marg works without either tool installed — you'll just see `indexing…` for noticeably longer the first time you launch super mode.
+
 ## usage
 
 ```bash
