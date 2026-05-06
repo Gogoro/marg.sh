@@ -19,6 +19,8 @@ final class AppState: ObservableObject {
     @Published var showingIgnoredManager: Bool = false
 
     private let userIgnoredKey = "userIgnoredFolders"
+    private let indexQueue = DispatchQueue(label: "marg.index", qos: .userInitiated)
+    private var indexGeneration: Int = 0
     private var watcher: FileWatcher?
     private var statusClearTimer: Timer?
 
@@ -29,10 +31,20 @@ final class AppState: ObservableObject {
     }
 
     func refreshIndex() {
-        let walker = FileTreeWalker(rootURL: rootURL, userIgnored: Set(userIgnoredFolders))
-        let result = walker.walk()
-        self.fileTree = result.tree
-        self.allMarkdownFiles = result.flatFiles
+        indexGeneration += 1
+        let generation = indexGeneration
+        let root = rootURL
+        let ignored = Set(userIgnoredFolders)
+
+        indexQueue.async { [weak self] in
+            let walker = FileTreeWalker(rootURL: root, userIgnored: ignored)
+            let result = walker.walk()
+            DispatchQueue.main.async {
+                guard let self = self, self.indexGeneration == generation else { return }
+                self.fileTree = result.tree
+                self.allMarkdownFiles = result.flatFiles
+            }
+        }
     }
 
     func addIgnoredFolder(name: String) {
@@ -41,15 +53,43 @@ final class AppState: ObservableObject {
         userIgnoredFolders.append(trimmed)
         userIgnoredFolders.sort()
         persistIgnoreList()
-        refreshIndex()
+        fileTree = filterTreeRemoving(basename: trimmed, from: fileTree)
+        allMarkdownFiles = allMarkdownFiles.filter { url in
+            !url.pathComponents.contains(trimmed)
+        }
         flashStatus("ignoring '\(trimmed)'")
+        refreshIndex()
     }
 
     func removeIgnoredFolder(name: String) {
         userIgnoredFolders.removeAll { $0 == name }
         persistIgnoreList()
-        refreshIndex()
         flashStatus("unignored '\(name)'")
+        refreshIndex()
+    }
+
+    private func filterTreeRemoving(basename: String, from nodes: [FileNode]) -> [FileNode] {
+        var result: [FileNode] = []
+        for node in nodes {
+            if node.isDirectory && node.name == basename {
+                continue
+            }
+            if let children = node.children {
+                let filteredChildren = filterTreeRemoving(basename: basename, from: children)
+                if node.isDirectory && filteredChildren.isEmpty {
+                    continue
+                }
+                result.append(FileNode(
+                    url: node.url,
+                    name: node.name,
+                    isDirectory: node.isDirectory,
+                    children: filteredChildren
+                ))
+            } else {
+                result.append(node)
+            }
+        }
+        return result
     }
 
     private func persistIgnoreList() {
