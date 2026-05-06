@@ -5,6 +5,7 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 ## Prose-shaped, not code-shaped
 
 - **Soft-wrap that stops at the terminal width — and an optional `max_width` cap below that.** Almost every code-oriented TUI editor lets text run to the right edge of a wide monitor; marg is designed so paragraphs stay at a comfortable reading length even on a 200-column terminal. `max_width = 80` in config gives you Word-doc line lengths regardless of window size.
+- **Prose narrow, code and tables wide — automatically.** Prose wraps at `max_width` for readability, but fenced code blocks and table rows use a separate `code_max_width` (default: full terminal width) so they don't get squished into the prose column. Same left margin, just allowed to extend further right. Other TUI editors force a single wrap width on every kind of content; marg lets the typography of the line follow the shape of the content.
 - **`j` / `k` move by visual line, not logical line.** In Neovim, pressing `j` on a wrapped paragraph jumps over the entire paragraph. In marg, it moves down one visible row — the way prose readers expect.
 - **No line numbers by default.** Code editors lead with line numbers; for prose they're noise. marg's editor area is just text.
 
@@ -22,7 +23,9 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 
 ## Real syntax highlighting inside fenced code blocks
 
-- **Code in markdown gets the full Chroma highlighter treatment.** ` ```go ` colors keywords, strings, comments, function names. Blocks without a language tag are auto-detected. Most TUI markdown editors color the fenced block uniformly green; marg actually parses the code.
+- **Tree-sitter inside fenced blocks for sql / go / javascript / typescript / rust / python / bash / yaml.** marg statically links the tree-sitter parsers for those eight languages and ships highlight queries that drive the same `@keyword`/`@function`/`@type`/`@variable.member` taxonomy nvim+catppuccin uses. The result: SQL keywords get one color, table names another, column names a third, strings their own. Function calls light up green-blue, struct fields lavender — grammar-aware, not regex-aware. As far as I know, no other terminal markdown reader bundles tree-sitter for inline rendering.
+- **Catppuccin Mocha colours by default.** The bundled tree-sitter palette is the same one catppuccin nvim uses, so SQL/Go/JS/Rust blocks read identically to your editor without configuration.
+- **Chroma fallback for everything else.** Languages we don't ship a tree-sitter parser for (Python, TypeScript, shell, YAML, JSON, …) fall through to Chroma, which is regex-tokenizer-good. Auto-detect handles untagged blocks. So you never see "uniform green" — every code block gets the best highlighting we can give it.
 
 ## Reading-grade typography in a terminal
 
@@ -42,6 +45,7 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 - **`*` / `_` / `` ` `` in visual mode wrap the selection in `**bold**`, `_italic_`, `` `code` ``.** No surround-plugin to install. The keys you'd reach for already do the right thing.
 - **`:H1` … `:H6` (and `:H0` to remove) toggle the current line's heading level**, preserving indentation. Most editors make you select-the-line-and-prepend manually.
 - **List continuation on Enter** carries `-`, `*`, `+`, or auto-incremented numbered bullets. Pressing Enter on an empty bullet exits the list cleanly. Standard in GUI editors; rare in TUIs.
+- **Tables auto-pad on save.** Rough-typed rows like `|a|b|c|` get rewritten with proper column padding the moment you save, so the source itself looks like a real grid — alignment specs (`:---`, `:---:`, `---:`) preserved. Most editors render tables nicely in preview but leave the source ragged; marg cleans the source, so the file reads cleanly in any tool that opens it.
 
 ## Built for the dictation + AI workflow
 

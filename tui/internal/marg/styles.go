@@ -12,7 +12,7 @@ var (
 	colorMuted       lipgloss.Color
 	colorDim         lipgloss.Color
 	colorAccent      lipgloss.Color
-	colorHeading     lipgloss.Color
+	colorHeadings    [6]lipgloss.Color
 	colorCode        lipgloss.Color
 	colorLink        lipgloss.Color
 	colorQuote       lipgloss.Color
@@ -20,7 +20,6 @@ var (
 	colorMatch       lipgloss.Color
 	colorMatchFg     lipgloss.Color
 	colorTreeCursor  lipgloss.Color
-	colorCodeBlockBg lipgloss.Color
 	colorCursorLine  lipgloss.Color
 	colorStatus      lipgloss.Color
 	colorWarn        = lipgloss.Color("#E5C07B") // legacy — used for dirty marker
@@ -32,8 +31,8 @@ var (
 	styleLineNumber       lipgloss.Style
 	styleCursorLineNumber lipgloss.Style
 
-	styleHeading lipgloss.Style
-	styleBold    lipgloss.Style
+	styleHeadings [6]lipgloss.Style
+	styleBold     lipgloss.Style
 	styleItalic  lipgloss.Style
 	styleCode    lipgloss.Style
 	styleLink    lipgloss.Style
@@ -59,7 +58,9 @@ func rebuildStyles() {
 	colorMuted = lipgloss.Color(active.muted)
 	colorDim = lipgloss.Color(active.dim)
 	colorAccent = lipgloss.Color(active.accent)
-	colorHeading = lipgloss.Color(active.heading)
+	for i, hex := range active.headings {
+		colorHeadings[i] = lipgloss.Color(hex)
+	}
 	colorCode = lipgloss.Color(active.codeInline)
 	colorLink = lipgloss.Color(active.link)
 	colorQuote = lipgloss.Color(active.quote)
@@ -67,7 +68,6 @@ func rebuildStyles() {
 	colorMatch = lipgloss.Color(active.matchBg)
 	colorMatchFg = lipgloss.Color(active.matchFg)
 	colorTreeCursor = lipgloss.Color(active.treeCursor)
-	colorCodeBlockBg = lipgloss.Color(active.codeBlockBg)
 	colorCursorLine = lipgloss.Color(active.cursorLine)
 	colorStatus = lipgloss.Color(active.statusFg)
 
@@ -87,7 +87,9 @@ func rebuildStyles() {
 		Align(lipgloss.Right).
 		MarginRight(1)
 
-	styleHeading = lipgloss.NewStyle().Foreground(colorHeading).Bold(true)
+	for i, c := range colorHeadings {
+		styleHeadings[i] = lipgloss.NewStyle().Foreground(c).Bold(true)
+	}
 	styleBold = lipgloss.NewStyle().Foreground(colorFg).Bold(true)
 	styleItalic = lipgloss.NewStyle().Foreground(colorFg).Italic(true)
 	styleCode = lipgloss.NewStyle().Foreground(colorCode)

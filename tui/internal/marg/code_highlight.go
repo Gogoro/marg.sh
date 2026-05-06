@@ -25,11 +25,13 @@ type tokenSpan struct {
 }
 
 // useAnsiPalette is true when the user wants marg to color code blocks with
-// the terminal's own ANSI bright colors (the default — guaranteed readable
-// because the terminal theme controls how vibrant they look). When false we
-// fall back to one of Chroma's curated styles.
-var useAnsiPalette = true
-var chromaStyle = mustLoadStyle("monokai")
+// the terminal's own ANSI bright colors (works regardless of the terminal's
+// theme, but the colors won't necessarily match marg's own palette). When
+// false we use one of Chroma's curated truecolor styles. Default:
+// catppuccin-mocha — same colors nvim+catppuccin uses, so syntax inside
+// fenced blocks reads coherently with the marg dark theme.
+var useAnsiPalette = false
+var chromaStyle = mustLoadStyle("catppuccin-mocha")
 
 func setCodeTheme(name string) {
 	if name == "ansi" || name == "" {
@@ -91,9 +93,13 @@ func (e *editor) scanCodeBlocks() codeBlockSpans {
 	return out
 }
 
-// tokenizeBlock joins lines [startRow..endRow] inclusive, picks a lexer
-// (explicit language wins; otherwise auto-detect), and writes per-row token
-// spans into spans.
+// tokenizeBlock joins lines [startRow..endRow] inclusive and writes per-row
+// token spans into spans. For languages we ship a tree-sitter parser for
+// the AST-based runner does the work. Anything else with an explicit
+// language tag falls back to Chroma. Untagged blocks (ASCII schemas,
+// tables, scratchpad text) skip syntax highlighting entirely so the body
+// text colour stays readable instead of being mis-classified by Chroma's
+// auto-detect.
 func tokenizeBlock(spans map[int][]tokenSpan, buf *buffer, startRow, endRow int, lang string) {
 	var content strings.Builder
 	for r := startRow; r <= endRow; r++ {
@@ -104,15 +110,18 @@ func tokenizeBlock(spans map[int][]tokenSpan, buf *buffer, startRow, endRow int,
 	}
 	text := content.String()
 
-	var lexer chroma.Lexer
-	if lang != "" {
-		lexer = lexers.Get(lang)
+	if tsLang := tsLanguageFor(lang); tsLang != nil {
+		if tsTokenizeBlock(spans, tsLang, text, startRow) {
+			return
+		}
 	}
-	if lexer == nil {
-		lexer = lexers.Analyse(text)
+
+	if lang == "" {
+		return
 	}
+	lexer := lexers.Get(lang)
 	if lexer == nil {
-		lexer = lexers.Fallback
+		return
 	}
 
 	iter, err := lexer.Tokenise(nil, text)

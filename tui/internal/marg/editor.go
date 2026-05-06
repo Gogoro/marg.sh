@@ -57,6 +57,11 @@ type editor struct {
 	// 0 means "no cap, use terminal width".
 	maxWidth int
 
+	// codeMaxWidth optionally caps the wrap width for fenced code blocks
+	// and table rows. 0 means "use the full available width to the right
+	// of the prose left margin", so code/tables get more room than prose.
+	codeMaxWidth int
+
 	// centerAbove is the terminal width at which the text block starts
 	// being horizontally centered. 0 disables centering.
 	centerAbove int
@@ -1224,6 +1229,22 @@ func (e *editor) wrapWidth() int {
 	return w
 }
 
+// codeWrapWidth is the wrap width used for fenced code blocks and table rows.
+// Code/tables anchor at the same left margin as prose but get to extend
+// further to the right — the goal being that prose stays comfortable to
+// read while code and tables don't get squished. 0 codeMaxWidth means
+// "fill all available room to the right of the left margin".
+func (e *editor) codeWrapWidth() int {
+	available := e.width - e.leftMargin() - 1
+	if e.codeMaxWidth > 0 && available > e.codeMaxWidth {
+		available = e.codeMaxWidth
+	}
+	if available < 10 {
+		return 10
+	}
+	return available
+}
+
 // leftMargin is the number of blank columns to the left of the text block.
 // Centering only kicks in once the terminal grows past `centerAbove`; below
 // that threshold the text stays left-aligned with a single-column gutter.
@@ -1243,10 +1264,15 @@ func (e *editor) leftMargin() int {
 
 // wrapLine breaks one logical line into visual lines using word-aware wrap.
 // For markdown list items, continuation segments carry a hangIndent so the
-// wrapped text aligns under the item content rather than the bullet.
-func (e *editor) wrapLine(row int) []visualLine {
+// wrapped text aligns under the item content rather than the bullet. Code
+// block rows and table rows use a wider wrap so they don't get squished by
+// the prose max_width.
+func (e *editor) wrapLine(row int, code codeBlockSpans) []visualLine {
 	line := e.buf.line(row)
 	w := e.wrapWidth()
+	if code.inCode[row] || isTableRow(line) {
+		w = e.codeWrapWidth()
+	}
 
 	hang := 0
 	if info, ok := parseListLine(line); ok {
@@ -1305,6 +1331,7 @@ func (e *editor) wrapLine(row int) []visualLine {
 }
 
 func (e *editor) allVisualLines() []visualLine {
+	code := e.scanCodeBlocks()
 	var out []visualLine
 	for r := 0; r < e.buf.lineCount(); r++ {
 		if r > 0 && startsAsHeading(e.buf.line(r)) {
@@ -1313,7 +1340,7 @@ func (e *editor) allVisualLines() []visualLine {
 				out = append(out, visualLine{row: -1, synthetic: true})
 			}
 		}
-		out = append(out, e.wrapLine(r)...)
+		out = append(out, e.wrapLine(r, code)...)
 	}
 	return out
 }
@@ -1381,14 +1408,14 @@ func (e *editor) view() string {
 		rows = append(rows, e.renderVisualLine(v, isCursorLine, codeSpans))
 	}
 	for len(rows) < e.height {
-		rows = append(rows, e.renderEmptyRow(false, false))
+		rows = append(rows, e.renderEmptyRow(false))
 	}
 	return strings.Join(rows, "\n")
 }
 
 func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSpans) string {
 	if v.synthetic {
-		return e.renderEmptyRow(false, false)
+		return e.renderEmptyRow(false)
 	}
 
 	line := e.buf.line(v.row)
@@ -1402,7 +1429,7 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 	}
 	searchMatches := findMatchesInLine(line, e.lastSearch)
 
-	rowBg, paintRow := e.rowBackground(hasCursor, inCode)
+	rowBg, paintRow := e.rowBackground(hasCursor)
 
 	cursorRel := -1
 	if hasCursor {
@@ -1474,8 +1501,20 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 		contentW++
 	}
 
-	prefixSpaces := strings.Repeat(" ", e.leftMargin()+v.hangIndent)
-	if paintRow {
+	prefixWidth := e.leftMargin() + v.hangIndent
+	prefixSpaces := strings.Repeat(" ", prefixWidth)
+	if inCode && e.leftMargin() > 0 {
+		railCol := e.leftMargin() - 1
+		leftSpaces := strings.Repeat(" ", railCol)
+		rightSpaces := strings.Repeat(" ", prefixWidth-railCol-1)
+		bgStyle := lipgloss.NewStyle()
+		railStyle := lipgloss.NewStyle().Foreground(colorMuted)
+		if paintRow {
+			bgStyle = bgStyle.Background(rowBg)
+			railStyle = railStyle.Background(rowBg)
+		}
+		prefixSpaces = bgStyle.Render(leftSpaces) + railStyle.Render("▎") + bgStyle.Render(rightSpaces)
+	} else if paintRow {
 		prefixSpaces = lipgloss.NewStyle().Background(rowBg).Render(prefixSpaces)
 	}
 
@@ -1493,12 +1532,9 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 // rowBackground returns the background colour to paint behind the entire
 // visual line (including margins and trailing fill). The boolean is false
 // when the row should stay transparent (default state on dark theme).
-func (e *editor) rowBackground(hasCursor, inCode bool) (lipgloss.Color, bool) {
+func (e *editor) rowBackground(hasCursor bool) (lipgloss.Color, bool) {
 	if hasCursor {
 		return colorCursorLine, true
-	}
-	if inCode {
-		return colorCodeBlockBg, true
 	}
 	if active.bg != "" {
 		return colorBg, true
@@ -1508,8 +1544,8 @@ func (e *editor) rowBackground(hasCursor, inCode bool) (lipgloss.Color, bool) {
 
 // renderEmptyRow draws a blank visual line — used for synthetic spacing
 // (above headings) and for trailing rows that pad the editor area.
-func (e *editor) renderEmptyRow(hasCursor, inCode bool) string {
-	rowBg, paint := e.rowBackground(hasCursor, inCode)
+func (e *editor) renderEmptyRow(hasCursor bool) string {
+	rowBg, paint := e.rowBackground(hasCursor)
 	if !paint {
 		return ""
 	}

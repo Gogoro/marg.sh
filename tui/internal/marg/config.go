@@ -18,6 +18,12 @@ type Config struct {
 	// terminal but you want comfortable reading line lengths.
 	MaxWidth int
 
+	// CodeMaxWidth caps the wrap width specifically for fenced code blocks
+	// and table rows. 0 means "let them use the full terminal width" — the
+	// usual choice, so prose stays narrow at MaxWidth while code and tables
+	// claim whatever horizontal room they need.
+	CodeMaxWidth int
+
 	// CenterAbove is the terminal width at which the text block starts
 	// being horizontally centered. 0 disables centering entirely (text
 	// hugs the left edge). A typical value: 160.
@@ -50,7 +56,7 @@ type Config struct {
 }
 
 func defaultConfig() Config {
-	cfg := Config{MaxWidth: 0, CodeTheme: "ansi", Theme: "dark"}
+	cfg := Config{MaxWidth: 0, CodeTheme: "catppuccin-mocha", Theme: "dark"}
 	if home, err := os.UserHomeDir(); err == nil {
 		cfg.SuperRoots = []string{home}
 	}
@@ -82,6 +88,10 @@ func loadConfig() Config {
 		case "max_width":
 			if n, err := strconv.Atoi(value); err == nil && n > 0 {
 				cfg.MaxWidth = n
+			}
+		case "code_max_width":
+			if n, err := strconv.Atoi(value); err == nil && n >= 0 {
+				cfg.CodeMaxWidth = n
 			}
 		case "center_above":
 			if n, err := strconv.Atoi(value); err == nil && n >= 0 {

@@ -143,8 +143,12 @@ final class AppState: ObservableObject {
 
     func saveCurrentFile() {
         guard let url = currentFileURL else { return }
+        let formatted = TableFormatter.format(text)
         do {
-            try text.write(to: url, atomically: true, encoding: .utf8)
+            try formatted.write(to: url, atomically: true, encoding: .utf8)
+            if formatted != text {
+                self.text = formatted
+            }
             self.isDirty = false
             flashStatus("saved")
         } catch {

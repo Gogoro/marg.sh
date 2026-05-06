@@ -51,6 +51,15 @@ func parseListLine(line []rune) (listLineInfo, bool) {
 	return listLineInfo{}, false
 }
 
+// isTableRow reports whether a buffer line looks like a markdown table row —
+// that is, it has the shape `| ... | ... |` once leading/trailing whitespace
+// is ignored. The wrap engine uses this to give tables the wider code-block
+// wrap width so the grid doesn't get squished by max_width.
+func isTableRow(line []rune) bool {
+	s := strings.TrimSpace(string(line))
+	return len(s) >= 2 && s[0] == '|' && s[len(s)-1] == '|'
+}
+
 // applyHeadingLevel rewrites e.buf.lines[row] so its heading level matches
 // `level` (0 strips heading entirely, 1..6 replaces or sets `#`-prefix).
 // Indentation is preserved.

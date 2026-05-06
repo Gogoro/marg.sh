@@ -7,7 +7,7 @@ struct MarkdownEditor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = true
+        scrollView.hasHorizontalScroller = false
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = true
         scrollView.backgroundColor = Theme.editorBackground
@@ -18,7 +18,7 @@ struct MarkdownEditor: NSViewRepresentable {
         let layoutManager = NSLayoutManager()
         textStorage.addLayoutManager(layoutManager)
 
-        let containerSize = NSSize(width: Theme.containerWidth, height: CGFloat.greatestFiniteMagnitude)
+        let containerSize = NSSize(width: Theme.maxContentWidth, height: CGFloat.greatestFiniteMagnitude)
         let textContainer = NSTextContainer(size: containerSize)
         textContainer.widthTracksTextView = false
         textContainer.lineFragmentPadding = 0
@@ -84,12 +84,19 @@ struct MarkdownEditor: NSViewRepresentable {
 
         let visibleWidth = scrollView.contentSize.width
         if visibleWidth > 0 {
-            let totalContentWidth = Theme.containerWidth + 2 * Theme.editorHorizontalPadding
-            let frameWidth = max(visibleWidth, totalContentWidth)
-            let extraSide = max(0, (frameWidth - totalContentWidth) / 2)
-            let inset = Theme.editorHorizontalPadding + extraSide
-            textView.textContainerInset = NSSize(width: inset, height: Theme.editorVerticalPadding)
-            textView.frame.size.width = frameWidth
+            let basePadding = Theme.editorHorizontalPadding
+            let availableForText = max(200, visibleWidth - 2 * basePadding)
+            let columnWidth = min(Theme.maxContentWidth, availableForText)
+            let leftInset = max(basePadding, (visibleWidth - columnWidth) / 2)
+
+            textView.textContainerInset = NSSize(width: leftInset, height: Theme.editorVerticalPadding)
+            if let container = textView.textContainer {
+                let newSize = NSSize(width: columnWidth, height: CGFloat.greatestFiniteMagnitude)
+                if container.size != newSize {
+                    container.size = newSize
+                }
+            }
+            textView.frame.size.width = visibleWidth
             textView.frame.size.height = max(textView.frame.size.height, scrollView.contentSize.height)
         }
     }

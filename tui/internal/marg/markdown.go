@@ -8,16 +8,10 @@ import (
 
 func baseStyleForLine(line []rune) lipgloss.Style {
 	s := strings.TrimLeft(string(line), " \t")
+	if level := headingLevel(s); level > 0 {
+		return styleHeadings[level-1]
+	}
 	switch {
-	case strings.HasPrefix(s, "######"),
-		strings.HasPrefix(s, "#####"),
-		strings.HasPrefix(s, "####"),
-		strings.HasPrefix(s, "###"),
-		strings.HasPrefix(s, "##"),
-		strings.HasPrefix(s, "#"):
-		if isHeadingLine(s) {
-			return styleHeading
-		}
 	case strings.HasPrefix(s, "```"):
 		return styleCode
 	case strings.HasPrefix(s, "> "):
@@ -27,13 +21,23 @@ func baseStyleForLine(line []rune) lipgloss.Style {
 }
 
 func isHeadingLine(s string) bool {
-	// `# foo` is a heading; `#tag` is not.
-	for i, r := range s {
-		if r != '#' {
-			return i > 0 && (r == ' ' || r == '\t')
-		}
+	return headingLevel(s) > 0
+}
+
+// headingLevel returns 1..6 for `#`..`######` lines and 0 for anything
+// else. `#tag` (no space after the hashes) is not a heading.
+func headingLevel(s string) int {
+	n := 0
+	for n < len(s) && s[n] == '#' {
+		n++
 	}
-	return false
+	if n == 0 || n > 6 {
+		return 0
+	}
+	if n < len(s) && (s[n] == ' ' || s[n] == '\t') {
+		return n
+	}
+	return 0
 }
 
 type inlineRange struct {

@@ -126,6 +126,7 @@ func initialModel(target startTarget, cfg Config) (app, error) {
 	}
 
 	a.editor.maxWidth = cfg.MaxWidth
+	a.editor.codeMaxWidth = cfg.CodeMaxWidth
 	a.editor.centerAbove = cfg.CenterAbove
 	a.picker = newPicker()
 	if target.kind == targetSuper {
@@ -189,6 +190,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.editor = ed
 		a.editor.maxWidth = a.cfg.MaxWidth
+		a.editor.codeMaxWidth = a.cfg.CodeMaxWidth
 		a.editor.centerAbove = a.cfg.CenterAbove
 		a.editor.resize(a.width, a.editorContentHeight())
 		a.view = viewEditor

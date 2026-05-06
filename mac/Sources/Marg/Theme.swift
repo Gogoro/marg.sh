@@ -9,7 +9,6 @@ enum Theme {
     static let bodyParagraphSpacing: CGFloat = 12
 
     static let maxContentWidth: CGFloat = 720
-    static let containerWidth: CGFloat = 1800
     static let editorHorizontalPadding: CGFloat = 56
     static let editorVerticalPadding: CGFloat = 72
     static let sidebarWidth: CGFloat = 240
