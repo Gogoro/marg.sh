@@ -23,7 +23,7 @@ final class MargAppDelegate: NSObject, NSApplicationDelegate {
             .environmentObject(appState)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1100, height: 720),
+            contentRect: NSRect(x: 0, y: 0, width: 1180, height: 760),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -31,6 +31,11 @@ final class MargAppDelegate: NSObject, NSApplicationDelegate {
         window.center()
         window.setFrameAutosaveName("MargMainWindow")
         window.title = "marg"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
+        window.appearance = NSAppearance(named: .aqua)
+        window.backgroundColor = NSColor.white
         window.minSize = NSSize(width: 760, height: 520)
         window.contentView = NSHostingView(rootView: rootView)
         window.makeKeyAndOrderFront(nil)

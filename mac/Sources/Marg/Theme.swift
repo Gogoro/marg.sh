@@ -1,20 +1,24 @@
 import AppKit
+import SwiftUI
 
 enum Theme {
-    static let bodyFontSize: CGFloat = 16
-    static let codeFontSize: CGFloat = 14
+    static let bodyFontSize: CGFloat = 17
+    static let codeFontSize: CGFloat = 14.5
 
-    static let lineHeightMultiple: CGFloat = 1.45
-    static let bodyParagraphSpacing: CGFloat = 8
+    static let lineHeightMultiple: CGFloat = 1.55
+    static let bodyParagraphSpacing: CGFloat = 12
 
     static let maxContentWidth: CGFloat = 720
-    static let editorHorizontalPadding: CGFloat = 32
-    static let editorVerticalPadding: CGFloat = 40
+    static let editorHorizontalPadding: CGFloat = 56
+    static let editorVerticalPadding: CGFloat = 72
+    static let sidebarWidth: CGFloat = 240
+    static let statusBarHeight: CGFloat = 28
+    static let titleBarInset: CGFloat = 36
 
-    static let bodyFont: NSFont = serifFont(size: bodyFontSize, weight: .regular)
-    static let boldFont: NSFont = serifFont(size: bodyFontSize, weight: .bold)
+    static let bodyFont: NSFont = NSFont.systemFont(ofSize: bodyFontSize, weight: .regular)
+    static let boldFont: NSFont = NSFont.systemFont(ofSize: bodyFontSize, weight: .semibold)
     static let italicFont: NSFont = {
-        let base = serifFont(size: bodyFontSize, weight: .regular)
+        let base = NSFont.systemFont(ofSize: bodyFontSize, weight: .regular)
         let descriptor = base.fontDescriptor.withSymbolicTraits(.italic)
         return NSFont(descriptor: descriptor, size: bodyFontSize) ?? base
     }()
@@ -22,35 +26,48 @@ enum Theme {
 
     static func headingFont(level: Int) -> NSFont {
         let size: CGFloat
+        let weight: NSFont.Weight
         switch level {
-        case 1: size = 30
-        case 2: size = 25
-        case 3: size = 21
-        case 4: size = 19
-        case 5: size = 18
-        default: size = 17
+        case 1: size = 34; weight = .bold
+        case 2: size = 26; weight = .semibold
+        case 3: size = 21; weight = .semibold
+        case 4: size = 18; weight = .semibold
+        case 5: size = 17; weight = .semibold
+        default: size = 16; weight = .semibold
         }
-        return serifFont(size: size, weight: .semibold)
+        return NSFont.systemFont(ofSize: size, weight: weight)
     }
 
-    static let bodyColor = NSColor.labelColor
-    static let secondaryColor = NSColor.secondaryLabelColor
-    static let mutedColor = NSColor.tertiaryLabelColor
-    static let codeColor = NSColor(srgbRed: 0.78, green: 0.43, blue: 0.55, alpha: 1)
-    static let linkColor = NSColor.linkColor
-    static let codeBlockBackground: NSColor = {
-        return NSColor.textBackgroundColor.blended(
-            withFraction: 0.06,
-            of: .secondaryLabelColor
-        ) ?? NSColor.controlBackgroundColor
-    }()
+    // NSColors for the NSAttributedString side.
+    static let bodyColor = NSColor(srgbRed: 0.10, green: 0.10, blue: 0.10, alpha: 1)
+    static let secondaryColor = NSColor(srgbRed: 0.47, green: 0.47, blue: 0.45, alpha: 1)
+    static let mutedColor = NSColor(srgbRed: 0.78, green: 0.78, blue: 0.76, alpha: 1)
+    static let codeColor = NSColor(srgbRed: 0.78, green: 0.30, blue: 0.45, alpha: 1)
+    static let linkColor = NSColor(srgbRed: 0.15, green: 0.39, blue: 0.92, alpha: 1)
+    static let codeBlockBackground = NSColor(srgbRed: 0.96, green: 0.96, blue: 0.94, alpha: 1)
+    static let editorBackground = NSColor.white
 
-    private static func serifFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
-        let base = NSFont.systemFont(ofSize: size, weight: weight)
-        if let descriptor = base.fontDescriptor.withDesign(.serif),
-           let serif = NSFont(descriptor: descriptor, size: size) {
-            return serif
-        }
-        return base
-    }
+    // Color tokens for the SwiftUI side.
+    static let editorBackgroundColor = Color.white
+    static let sidebarBackgroundColor = Color(NSColor(srgbRed: 0.973, green: 0.969, blue: 0.961, alpha: 1))
+    static let sidebarHoverColor = Color(NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.045))
+    static let sidebarSelectionColor = Color(NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.075))
+    static let dividerColor = Color(NSColor(srgbRed: 0.91, green: 0.91, blue: 0.89, alpha: 1))
+    static let primaryTextColor = Color(NSColor(srgbRed: 0.10, green: 0.10, blue: 0.10, alpha: 1))
+    static let secondaryTextColor = Color(NSColor(srgbRed: 0.47, green: 0.47, blue: 0.45, alpha: 1))
+    static let mutedTextColor = Color(NSColor(srgbRed: 0.65, green: 0.65, blue: 0.62, alpha: 1))
+    static let accentTextColor = Color(NSColor(srgbRed: 0.10, green: 0.10, blue: 0.10, alpha: 1))
+    static let dirtyDotColor = Color(NSColor(srgbRed: 0.92, green: 0.55, blue: 0.20, alpha: 1))
+
+    static let pickerOverlayColor = Color.black.opacity(0.18)
+    static let pickerCardColor = Color.white
+    static let pickerCardBorderColor = Color(NSColor(srgbRed: 0.86, green: 0.86, blue: 0.84, alpha: 1))
+    static let pickerSelectionColor = Color(NSColor(srgbRed: 0.95, green: 0.95, blue: 0.93, alpha: 1))
+
+    static let bodyTextSwiftUI = Font.system(size: 13, weight: .regular)
+    static let sidebarFont = Font.system(size: 13, weight: .regular)
+    static let sidebarHeaderFont = Font.system(size: 11, weight: .semibold).smallCaps()
+    static let statusFont = Font.system(size: 11, weight: .regular)
+    static let pickerInputFont = Font.system(size: 18, weight: .regular)
+    static let pickerRowFont = Font.system(size: 13, weight: .regular)
 }

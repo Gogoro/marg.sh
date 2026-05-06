@@ -9,7 +9,8 @@ struct MarkdownEditor: NSViewRepresentable {
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.borderType = .noBorder
-        scrollView.drawsBackground = false
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = Theme.editorBackground
         scrollView.autohidesScrollers = true
 
         let textView = EditorTextView()
@@ -38,9 +39,9 @@ struct MarkdownEditor: NSViewRepresentable {
             width: Theme.editorHorizontalPadding,
             height: Theme.editorVerticalPadding
         )
-        textView.backgroundColor = NSColor.textBackgroundColor
+        textView.backgroundColor = Theme.editorBackground
         textView.drawsBackground = true
-        textView.insertionPointColor = NSColor.controlAccentColor
+        textView.insertionPointColor = Theme.bodyColor
         textView.font = Theme.bodyFont
         textView.textColor = Theme.bodyColor
 
@@ -128,6 +129,10 @@ final class EditorTextView: NSTextView {
 
     override func keyDown(with event: NSEvent) {
         guard let appState = appState else {
+            super.keyDown(with: event)
+            return
+        }
+        if !appState.vimEnabled {
             super.keyDown(with: event)
             return
         }

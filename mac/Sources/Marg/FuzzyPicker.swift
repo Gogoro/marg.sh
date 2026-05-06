@@ -1,50 +1,21 @@
 import SwiftUI
 import AppKit
 
-struct FuzzyPicker: View {
+struct FuzzyPickerOverlay: View {
     @EnvironmentObject var appState: AppState
-    @Environment(\.dismiss) private var dismiss
-
     @State private var query: String = ""
     @State private var cursor: Int = 0
     @FocusState private var inputFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Text("›")
-                    .font(.system(.title3, design: .monospaced))
-                    .foregroundColor(.secondary)
-                TextField("type to filter", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.system(.title3))
-                    .focused($inputFocused)
-                    .onSubmit { openSelection() }
-                    .onChange(of: query) { _, _ in cursor = 0 }
-                Text("\(matches.count)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+        ZStack {
+            Theme.pickerOverlayColor
+                .ignoresSafeArea()
+                .onTapGesture { close() }
 
-            Divider()
-
-            ScrollViewReader { proxy in
-                List {
-                    ForEach(Array(matches.enumerated()), id: \.element.url) { index, item in
-                        FuzzyPickerRow(displayPath: item.display, isSelected: index == cursor)
-                            .id(item.url)
-                            .onTapGesture { openItem(item.url) }
-                    }
-                }
-                .listStyle(.plain)
-                .onChange(of: cursor) { _, newValue in
-                    if newValue < matches.count {
-                        proxy.scrollTo(matches[newValue].url, anchor: .center)
-                    }
-                }
-            }
+            card
+                .frame(width: 620, height: 460)
+                .shadow(color: Color.black.opacity(0.18), radius: 32, x: 0, y: 16)
         }
         .background(KeyCatcher(
             onMoveUp: { moveCursor(-1) },
@@ -52,9 +23,58 @@ struct FuzzyPicker: View {
             onCancel: { close() },
             onSubmit: { openSelection() }
         ))
-        .onAppear {
-            inputFocused = true
+        .onAppear { inputFocused = true }
+        .transition(.opacity)
+    }
+
+    private var card: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(Theme.mutedTextColor)
+                    .font(.system(size: 14, weight: .medium))
+                TextField("type to filter", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(Theme.pickerInputFont)
+                    .focused($inputFocused)
+                    .onSubmit { openSelection() }
+                    .onChange(of: query) { _, _ in cursor = 0 }
+                if !query.isEmpty {
+                    Text("\(matches.count)")
+                        .font(.system(size: 11))
+                        .foregroundColor(Theme.mutedTextColor)
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+
+            Rectangle()
+                .fill(Theme.dividerColor)
+                .frame(height: 1)
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(matches.enumerated()), id: \.element.url) { index, item in
+                            FuzzyPickerRow(displayPath: item.display, isSelected: index == cursor)
+                                .id(item.url)
+                                .onTapGesture { openItem(item.url) }
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+                .onChange(of: cursor) { _, newValue in
+                    guard newValue < matches.count else { return }
+                    proxy.scrollTo(matches[newValue].url, anchor: .center)
+                }
+            }
         }
+        .background(Theme.pickerCardColor)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Theme.pickerCardBorderColor, lineWidth: 1)
+        )
     }
 
     private var matches: [(url: URL, display: String)] {
@@ -90,7 +110,6 @@ struct FuzzyPicker: View {
 
     private func close() {
         appState.showingPicker = false
-        dismiss()
     }
 }
 
@@ -99,17 +118,21 @@ private struct FuzzyPickerRow: View {
     let isSelected: Bool
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
+            Image(systemName: "doc.text")
+                .font(.system(size: 11))
+                .foregroundColor(isSelected ? Theme.primaryTextColor : Theme.mutedTextColor)
+                .frame(width: 14)
             Text(displayPath)
+                .font(Theme.pickerRowFont)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .foregroundColor(isSelected ? Color(NSColor.selectedMenuItemTextColor) : Color(NSColor.labelColor))
+                .foregroundColor(Theme.primaryTextColor)
             Spacer()
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 4)
-        .listRowInsets(EdgeInsets())
-        .background(isSelected ? Color(NSColor.controlAccentColor) : Color.clear)
+        .padding(.vertical, 7)
+        .background(isSelected ? Theme.pickerSelectionColor : Color.clear)
     }
 }
 
@@ -151,23 +174,12 @@ private final class KeyCatcherView: NSView {
         if window != nil, monitor == nil {
             monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self else { return event }
-                if event.keyCode == 53 { // esc
-                    self.onCancel()
-                    return nil
-                }
-                if event.keyCode == 126 { // up arrow
-                    self.onMoveUp()
-                    return nil
-                }
-                if event.keyCode == 125 { // down arrow
-                    self.onMoveDown()
-                    return nil
-                }
-                if event.modifierFlags.contains(.control) {
-                    if let chars = event.charactersIgnoringModifiers {
-                        if chars == "p" || chars == "k" { self.onMoveUp(); return nil }
-                        if chars == "n" || chars == "j" { self.onMoveDown(); return nil }
-                    }
+                if event.keyCode == 53 { self.onCancel(); return nil }
+                if event.keyCode == 126 { self.onMoveUp(); return nil }
+                if event.keyCode == 125 { self.onMoveDown(); return nil }
+                if event.modifierFlags.contains(.control), let chars = event.charactersIgnoringModifiers {
+                    if chars == "p" || chars == "k" { self.onMoveUp(); return nil }
+                    if chars == "n" || chars == "j" { self.onMoveDown(); return nil }
                 }
                 return event
             }

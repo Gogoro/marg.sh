@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var allMarkdownFiles: [URL] = []
     @Published var showingPicker: Bool = false
     @Published var vimMode: VimMode = .normal
+    @Published var vimEnabled: Bool = false
     @Published var statusMessage: String?
     @Published var commandLineBuffer: String = ""
     @Published var quitRequested: Bool = false

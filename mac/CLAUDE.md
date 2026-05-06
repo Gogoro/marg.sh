@@ -51,3 +51,7 @@ Not a missing-feature list — a do-not-over-build list:
 - Markdown table rendering / image previews
 
 Add when there's a real reason. The point of v1 is the *feel* of opening, reading, editing markdown.
+
+## vim mode
+
+Vim mode is implemented in `VimMode.swift` but **gated off** via `appState.vimEnabled = false`. Default behavior is plain NSTextView editing. Vim becomes a setting we expose later, once the visual feel is dialed in. Don't reference vim mode in onboarding or status chrome — keep the default surface clean.

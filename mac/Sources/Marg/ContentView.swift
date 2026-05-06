@@ -5,29 +5,30 @@ struct ContentView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        NavigationSplitView {
-            FileTreeView()
-                .frame(minWidth: 220)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 360)
-        } detail: {
-            VStack(spacing: 0) {
-                MarkdownEditor()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                StatusBar()
+        ZStack(alignment: .top) {
+            HStack(spacing: 0) {
+                FileTreeView()
+                    .frame(width: Theme.sidebarWidth)
+                    .background(Theme.sidebarBackgroundColor)
+
+                Rectangle()
+                    .fill(Theme.dividerColor)
+                    .frame(width: 1)
+
+                VStack(spacing: 0) {
+                    MarkdownEditor()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    StatusBar()
+                }
+                .background(Theme.editorBackgroundColor)
+            }
+            .background(Theme.editorBackgroundColor)
+
+            if appState.showingPicker {
+                FuzzyPickerOverlay()
             }
         }
-        .navigationTitle(currentTitle)
-        .sheet(isPresented: $appState.showingPicker) {
-            FuzzyPicker()
-                .frame(minWidth: 540, minHeight: 360)
-        }
-    }
-
-    private var currentTitle: String {
-        if let url = appState.currentFileURL {
-            return url.lastPathComponent + (appState.isDirty ? " ●" : "")
-        }
-        return "marg"
+        .preferredColorScheme(.light)
     }
 }
 
@@ -36,63 +37,62 @@ struct StatusBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(modeLabel)
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(modeColor)
-                .cornerRadius(3)
-
-            if let url = appState.currentFileURL {
-                Text(url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
-                    .foregroundColor(Color(NSColor.secondaryLabelColor))
+            if appState.vimEnabled && appState.vimMode == .commandLine {
+                Text(":\(appState.commandLineBuffer)")
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundColor(Theme.primaryTextColor)
+            } else {
+                Text(leftLabel)
+                    .font(Theme.statusFont)
+                    .foregroundColor(Theme.mutedTextColor)
                     .lineLimit(1)
                     .truncationMode(.middle)
-            } else {
-                Text("no file open")
-                    .foregroundColor(Color(NSColor.tertiaryLabelColor))
-            }
-
-            if appState.isDirty {
-                Text("●")
-                    .foregroundColor(Color(NSColor.systemOrange))
             }
 
             Spacer()
 
-            if appState.vimMode == .commandLine {
-                Text(":\(appState.commandLineBuffer)")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(Color(NSColor.labelColor))
-            } else if let message = appState.statusMessage {
+            if appState.isDirty {
+                Circle()
+                    .fill(Theme.dirtyDotColor)
+                    .frame(width: 6, height: 6)
+            }
+
+            if let message = appState.statusMessage {
                 Text(message)
-                    .foregroundColor(Color(NSColor.secondaryLabelColor))
+                    .font(Theme.statusFont)
+                    .foregroundColor(Theme.mutedTextColor)
                     .lineLimit(1)
             }
+
+            if appState.vimEnabled {
+                Text(modeLabel)
+                    .font(.system(size: 10, weight: .medium).smallCaps())
+                    .foregroundColor(Theme.mutedTextColor)
+                    .tracking(0.4)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color(NSColor.windowBackgroundColor))
-        .overlay(Divider(), alignment: .top)
-        .font(.caption)
+        .padding(.horizontal, 18)
+        .frame(height: Theme.statusBarHeight)
+        .background(
+            Rectangle()
+                .fill(Theme.editorBackgroundColor)
+                .overlay(Rectangle().fill(Theme.dividerColor).frame(height: 1), alignment: .top)
+        )
+    }
+
+    private var leftLabel: String {
+        if let url = appState.currentFileURL {
+            return url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+        }
+        return "no file open"
     }
 
     private var modeLabel: String {
         switch appState.vimMode {
-        case .normal: return "NORMAL"
-        case .insert: return "INSERT"
-        case .visual: return "VISUAL"
-        case .commandLine: return "CMD"
-        }
-    }
-
-    private var modeColor: Color {
-        switch appState.vimMode {
-        case .normal: return Color(NSColor.systemBlue)
-        case .insert: return Color(NSColor.systemGreen)
-        case .visual: return Color(NSColor.systemPurple)
-        case .commandLine: return Color(NSColor.systemOrange)
+        case .normal: return "normal"
+        case .insert: return "insert"
+        case .visual: return "visual"
+        case .commandLine: return "command"
         }
     }
 }
