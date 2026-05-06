@@ -18,7 +18,7 @@ final class AppState: ObservableObject {
     @Published var userIgnoredFolders: [String]
     @Published var showingIgnoredManager: Bool = false
     @Published var isIndexing: Bool = false
-    @Published var collapsedDirectories: Set<URL> = []
+    @Published var expandedDirectories: Set<URL> = []
 
     private let userIgnoredKey = "userIgnoredFolders"
     private let indexQueue = DispatchQueue(label: "marg.index", qos: .userInitiated)
@@ -121,11 +121,11 @@ final class AppState: ObservableObject {
         }
     }
 
-    func toggleDirectoryCollapsed(_ url: URL) {
-        if collapsedDirectories.contains(url) {
-            collapsedDirectories.remove(url)
+    func toggleDirectoryExpansion(_ url: URL) {
+        if expandedDirectories.contains(url) {
+            expandedDirectories.remove(url)
         } else {
-            collapsedDirectories.insert(url)
+            expandedDirectories.insert(url)
         }
     }
 
@@ -133,7 +133,7 @@ final class AppState: ObservableObject {
         let rootPath = rootURL.path
         var ancestor = fileURL.deletingLastPathComponent()
         while ancestor.path.hasPrefix(rootPath) {
-            collapsedDirectories.remove(ancestor)
+            expandedDirectories.insert(ancestor)
             if ancestor.path == rootPath { break }
             let parent = ancestor.deletingLastPathComponent()
             if parent.path == ancestor.path { break }

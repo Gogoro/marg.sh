@@ -39,12 +39,11 @@ struct FileTreeView: View {
                         .padding(.bottom, 12)
                     }
                 }
-                .onChange(of: appState.currentFileURL) { _, newURL in
-                    guard let url = newURL else { return }
-                    DispatchQueue.main.async {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            proxy.scrollTo(url, anchor: .center)
-                        }
+                .task(id: appState.currentFileURL) {
+                    guard let url = appState.currentFileURL else { return }
+                    try? await Task.sleep(nanoseconds: 120_000_000)
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo(url, anchor: .center)
                     }
                 }
             }
@@ -77,7 +76,7 @@ private struct FileTreeNodeView: View {
     @State private var hovered: Bool = false
 
     private var isExpanded: Bool {
-        !appState.collapsedDirectories.contains(node.url)
+        appState.expandedDirectories.contains(node.url)
     }
 
     var body: some View {
@@ -120,7 +119,7 @@ private struct FileTreeNodeView: View {
         .onHover { hovered = $0 }
         .onTapGesture {
             if node.isDirectory {
-                appState.toggleDirectoryCollapsed(node.url)
+                appState.toggleDirectoryExpansion(node.url)
             } else {
                 appState.loadFile(node.url)
             }
