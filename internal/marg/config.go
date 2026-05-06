@@ -28,6 +28,11 @@ type Config struct {
 	// "monokai" (high-contrast, readable on dark terminals).
 	CodeTheme string
 
+	// Theme switches the entire editor palette. "dark" (default), "light",
+	// or "sepia". Light and sepia paint an opaque background so they look
+	// right even when launched from a dark terminal window.
+	Theme string
+
 	// SuperRoots are the directories super mode walks when launched without
 	// arguments. Defaults to the user's home directory; can be set to one or
 	// more absolute paths or `~`-prefixed paths.
@@ -45,7 +50,7 @@ type Config struct {
 }
 
 func defaultConfig() Config {
-	cfg := Config{MaxWidth: 0, CodeTheme: "ansi"}
+	cfg := Config{MaxWidth: 0, CodeTheme: "ansi", Theme: "dark"}
 	if home, err := os.UserHomeDir(); err == nil {
 		cfg.SuperRoots = []string{home}
 	}
@@ -85,6 +90,10 @@ func loadConfig() Config {
 		case "code_theme":
 			if value != "" {
 				cfg.CodeTheme = value
+			}
+		case "theme":
+			if value != "" {
+				cfg.Theme = value
 			}
 		case "super_roots":
 			if roots := parseRootList(value); len(roots) > 0 {

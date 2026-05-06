@@ -623,6 +623,9 @@ func (e *editor) runCommand(cmd string) tea.Cmd {
 		e.reloadFromDisk(true)
 		return nil
 	}
+	if cmd == "zen" {
+		return func() tea.Msg { return zenToggleMsg{} }
+	}
 	if strings.HasPrefix(cmd, "%s/") {
 		e.runSubstitute(cmd[3:], 0, e.buf.lineCount()-1)
 		return nil
@@ -1190,11 +1193,20 @@ func (e *editor) clampCursor() {
 // --- viewport / soft-wrap ---
 
 // visualLine describes one wrapped segment of a logical buffer line.
+//
+// hangIndent > 0 means this is a continuation segment of a list item: the
+// renderer prepends that many spaces so the wrapped text aligns under the
+// item content rather than the bullet glyph.
+//
+// synthetic = true means this visual line has no source rune content — it's
+// padding inserted for typographic rhythm (e.g. above a heading).
 type visualLine struct {
-	row      int
-	startCol int
-	endCol   int // exclusive
-	text     []rune
+	row        int
+	startCol   int
+	endCol     int // exclusive
+	text       []rune
+	hangIndent int
+	synthetic  bool
 }
 
 // wrapWidth is the number of columns available for text content. We subtract
@@ -1230,22 +1242,42 @@ func (e *editor) leftMargin() int {
 }
 
 // wrapLine breaks one logical line into visual lines using word-aware wrap.
+// For markdown list items, continuation segments carry a hangIndent so the
+// wrapped text aligns under the item content rather than the bullet.
 func (e *editor) wrapLine(row int) []visualLine {
 	line := e.buf.line(row)
 	w := e.wrapWidth()
+
+	hang := 0
+	if info, ok := parseListLine(line); ok {
+		hang = info.prefixRunes
+	}
+
 	if len(line) == 0 {
-		return []visualLine{{row: row, startCol: 0, endCol: 0, text: nil}}
+		return []visualLine{{row: row, startCol: 0, endCol: 0}}
 	}
 
 	var out []visualLine
 	start := 0
+	first := true
 	for start < len(line) {
-		end := start + w
+		segW := w
+		indent := 0
+		if !first {
+			indent = hang
+			segW = w - indent
+			if segW < 10 {
+				segW = 10
+			}
+		}
+		end := start + segW
 		if end >= len(line) {
-			out = append(out, visualLine{row: row, startCol: start, endCol: len(line), text: line[start:]})
+			out = append(out, visualLine{
+				row: row, startCol: start, endCol: len(line),
+				text: line[start:], hangIndent: indent,
+			})
 			break
 		}
-		// Try to break at last space at or before end.
 		brk := -1
 		for i := end; i > start; i-- {
 			if line[i] == ' ' {
@@ -1254,14 +1286,20 @@ func (e *editor) wrapLine(row int) []visualLine {
 			}
 		}
 		if brk == -1 {
-			// No space — hard wrap at width.
-			out = append(out, visualLine{row: row, startCol: start, endCol: end, text: line[start:end]})
+			out = append(out, visualLine{
+				row: row, startCol: start, endCol: end,
+				text: line[start:end], hangIndent: indent,
+			})
 			start = end
+			first = false
 			continue
 		}
-		out = append(out, visualLine{row: row, startCol: start, endCol: brk, text: line[start:brk]})
-		// Skip the space itself when starting next visual line.
+		out = append(out, visualLine{
+			row: row, startCol: start, endCol: brk,
+			text: line[start:brk], hangIndent: indent,
+		})
 		start = brk + 1
+		first = false
 	}
 	return out
 }
@@ -1269,9 +1307,23 @@ func (e *editor) wrapLine(row int) []visualLine {
 func (e *editor) allVisualLines() []visualLine {
 	var out []visualLine
 	for r := 0; r < e.buf.lineCount(); r++ {
+		if r > 0 && startsAsHeading(e.buf.line(r)) {
+			prev := strings.TrimSpace(string(e.buf.line(r - 1)))
+			if prev != "" {
+				out = append(out, visualLine{row: -1, synthetic: true})
+			}
+		}
 		out = append(out, e.wrapLine(r)...)
 	}
 	return out
+}
+
+func startsAsHeading(line []rune) bool {
+	s := strings.TrimLeft(string(line), " \t")
+	if !strings.HasPrefix(s, "#") {
+		return false
+	}
+	return isHeadingLine(s)
 }
 
 func (e *editor) cursorVisualIndex(visuals []visualLine) int {
@@ -1328,29 +1380,29 @@ func (e *editor) view() string {
 		isCursorLine := i == cursorIdx
 		rows = append(rows, e.renderVisualLine(v, isCursorLine, codeSpans))
 	}
-	// Pad to fill height.
 	for len(rows) < e.height {
-		rows = append(rows, "")
+		rows = append(rows, e.renderEmptyRow(false, false))
 	}
 	return strings.Join(rows, "\n")
 }
 
 func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSpans) string {
+	if v.synthetic {
+		return e.renderEmptyRow(false, false)
+	}
+
 	line := e.buf.line(v.row)
 	inCode := code.inCode[v.row]
 	codeRowSpans := code.spans[v.row]
 
-	var base lipgloss.Style
+	base := baseStyleForLine(line)
 	var inlines []inlineRange
-	if inCode {
-		// Inside (or on the fence of) a fenced code block: use Chroma's
-		// per-token coloring as the base; skip markdown inline parsing.
-		base = baseStyleForLine(line)
-	} else {
-		base = baseStyleForLine(line)
+	if !inCode {
 		inlines = inlineRanges(line)
 	}
 	searchMatches := findMatchesInLine(line, e.lastSearch)
+
+	rowBg, paintRow := e.rowBackground(hasCursor, inCode)
 
 	cursorRel := -1
 	if hasCursor {
@@ -1362,7 +1414,6 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 		cursorStyle = lipgloss.NewStyle().Foreground(colorAccent).Underline(true)
 	}
 
-	// Build the segment by grouping runs of equal effective style.
 	type run struct {
 		style lipgloss.Style
 		text  []rune
@@ -1391,11 +1442,14 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 				}
 			}
 		}
+		if paintRow {
+			s = s.Background(rowBg)
+		}
 		if e.isSelected(v.row, col) {
 			s = s.Background(colorSelection)
 		}
 		if isInRanges(col, searchMatches) {
-			s = s.Background(colorMatch)
+			s = s.Background(colorMatch).Foreground(colorMatchFg)
 		}
 		if i == cursorRel {
 			s = cursorStyle
@@ -1408,18 +1462,58 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 	}
 	flush()
 
-	// Cursor sitting past the end of this segment (e.g. end-of-line in insert).
+	contentW := segLen
+
 	if hasCursor && cursorRel == segLen {
 		b.WriteString(cursorStyle.Render(" "))
+		contentW++
 	}
 
-	// In visual line mode, give an explicit hint that an empty line is
-	// part of the selection by trailing one selected space.
 	if e.mode == modeVisualLine && segLen == 0 && e.isSelected(v.row, 0) {
 		b.WriteString(lipgloss.NewStyle().Background(colorSelection).Render(" "))
+		contentW++
 	}
 
-	return strings.Repeat(" ", e.leftMargin()) + b.String()
+	prefixSpaces := strings.Repeat(" ", e.leftMargin()+v.hangIndent)
+	if paintRow {
+		prefixSpaces = lipgloss.NewStyle().Background(rowBg).Render(prefixSpaces)
+	}
+
+	tail := ""
+	if paintRow {
+		filled := e.leftMargin() + v.hangIndent + contentW
+		if e.width > filled {
+			tail = lipgloss.NewStyle().Background(rowBg).Render(strings.Repeat(" ", e.width-filled))
+		}
+	}
+
+	return prefixSpaces + b.String() + tail
+}
+
+// rowBackground returns the background colour to paint behind the entire
+// visual line (including margins and trailing fill). The boolean is false
+// when the row should stay transparent (default state on dark theme).
+func (e *editor) rowBackground(hasCursor, inCode bool) (lipgloss.Color, bool) {
+	if hasCursor {
+		return colorCursorLine, true
+	}
+	if inCode {
+		return colorCodeBlockBg, true
+	}
+	if active.bg != "" {
+		return colorBg, true
+	}
+	return "", false
+}
+
+// renderEmptyRow draws a blank visual line — used for synthetic spacing
+// (above headings) and for trailing rows that pad the editor area.
+func (e *editor) renderEmptyRow(hasCursor, inCode bool) string {
+	rowBg, paint := e.rowBackground(hasCursor, inCode)
+	if !paint {
+		return ""
+	}
+	return lipgloss.NewStyle().Background(rowBg).Render(strings.Repeat(" ", e.width))
 }
 
 func (e *editor) statusBar(width int, transient string) string {

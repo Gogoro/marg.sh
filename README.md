@@ -130,7 +130,7 @@ Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax hi
 | `p` / `P`      | paste after / before cursor (or below/above for line-wise) |
 | `v` / `V`      | visual / visual-line selection mode   |
 | `/`            | search forward (then `n` / `N` to repeat) |
-| `:`            | command line (`:w`, `:q`, `:wq`, `:e`, `:e!`, `:Ex`, `:H1..:H6`, `:s/…`, `:%s/…`) |
+| `:`            | command line (`:w`, `:q`, `:wq`, `:e`, `:e!`, `:zen`, `:Ex`, `:H1..:H6`, `:s/…`, `:%s/…`) |
 | `ctrl+s`       | save                                  |
 
 ### editor — visual mode (`v` / `V`)
@@ -178,6 +178,14 @@ Type to filter (subsequence match). Up/down to navigate. Enter to open. Esc to c
 Optional config at `~/.config/marg/config.toml`. Format is `key = value` per line, `#` for comments.
 
 ```toml
+# Editor palette. Three curated themes ship with the binary.
+#   "dark"  → soft off-white on the terminal background (default)
+#   "light" → Solarized Light: dark warm grey on a cream background
+#   "sepia" → warmer paper-like cream that's easy on the eyes
+# Light and sepia paint an opaque background so they look right even when
+# launched from a dark terminal.
+theme = "dark"
+
 # Cap the wrap width below the terminal width — useful in wide terminals
 # where prose otherwise stretches out into a horizontal blur.
 max_width = 80
@@ -231,6 +239,29 @@ The same paragraph with `max_width = 80` stays at a comfortable book-page column
   <br/>
   <i>With <code>max_width = 80</code> — text held at a comfortable reading width.</i>
 </p>
+
+## reading-friendly typography
+
+A few small touches that add up:
+
+- **Hanging indents on wrapped list items.** When `- a long bullet` soft-wraps, the continuation aligns under the content, not under the dash.
+- **Vertical rhythm around headings.** A blank visual line is rendered above every heading so sections breathe.
+- **Subtle code-block backgrounds.** Fenced code blocks get a tinted region so they read as a separate kind of content without screaming.
+- **Cursorline.** The line under the cursor gets a barely-perceptible background tint so you don't lose your place when looking away.
+- **Centered text on wide monitors** via `center_above` (see config below).
+- **`:zen`** toggles a reading mode that hides the status bar — only text remains.
+
+## recommended fonts
+
+Marg can't pick your terminal font for you, but a few work especially well for long-form prose:
+
+- **[iA Writer Mono S](https://github.com/iaolo/iA-Fonts)** — designed for prose. Slightly looser tracking, real italics, very calm.
+- **[Monaspace Neon](https://monaspace.githubnext.com/)** — GitHub's prose-leaning monospace. Pairs well with Krypton for code.
+- **[JetBrains Mono](https://www.jetbrains.com/lp/mono/)** — popular default; ligatures off if reading prose.
+- **[Berkeley Mono](https://berkeleygraphics.com/typefaces/berkeley-mono/)** — premium, but the typography is a step up if you live in a terminal.
+- **[IBM Plex Mono](https://www.ibm.com/plex/)** — free, calm, pairs with Plex Serif if you want a matched display font.
+
+Fira Code and Cascadia Code work too; both are oriented more toward code than prose, but they're widely installed.
 
 ## regenerating the screenshots
 

@@ -28,6 +28,7 @@ func Run(args []string) error {
 
 	cfg := loadConfig()
 	applyDirConfig(cfg.IgnoreDirs, cfg.IncludeDirs)
+	applyTheme(cfg.Theme)
 	if cfg.CodeTheme != "" {
 		setCodeTheme(cfg.CodeTheme)
 	}
@@ -72,6 +73,10 @@ type app struct {
 	// (e.g. Claude Code rewriting the file in another tmux pane) trigger
 	// an auto-reload.
 	watcher *fileWatcher
+
+	// zenMode hides the status bar and gives the editor the entire
+	// terminal height — toggled with `:zen`.
+	zenMode bool
 
 	view    view
 	editor  editor
@@ -205,6 +210,11 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, cmd
 
+	case zenToggleMsg:
+		a.zenMode = !a.zenMode
+		a.editor.resize(a.width, a.editorContentHeight())
+		return a, nil
+
 	case quitMsg:
 		a.quitting = true
 		return a, tea.Quit
@@ -302,8 +312,10 @@ func (a app) View() string {
 		body = a.tree.view()
 	}
 
-	status := a.renderStatusBar()
-	out := body + "\n" + status
+	out := body
+	if !a.zenMode {
+		out = body + "\n" + a.renderStatusBar()
+	}
 
 	if a.picking {
 		out = a.picker.overlay(out)
@@ -312,6 +324,12 @@ func (a app) View() string {
 }
 
 func (a app) editorContentHeight() int {
+	if a.zenMode {
+		if a.height <= 0 {
+			return 1
+		}
+		return a.height
+	}
 	// Reserve one row for the status bar.
 	if a.height <= 1 {
 		return 1
@@ -362,6 +380,7 @@ func (a *app) handleFileChanged() {
 type statusMsg string
 type openFileMsg string
 type quitMsg struct{}
+type zenToggleMsg struct{}
 
 func openFileCmd(path string) tea.Cmd {
 	return func() tea.Msg { return openFileMsg(path) }

@@ -2,60 +2,116 @@ package marg
 
 import "github.com/charmbracelet/lipgloss"
 
-// One restrained palette. Adjust here, nowhere else.
+// All renderable styles derive from the `active` palette in themes.go.
+// They are populated once on startup via rebuildStyles() and again any
+// time the user switches theme.
+
 var (
-	colorAccent     = lipgloss.Color("#7AA2F7") // soft blue
-	colorSelection  = lipgloss.Color("#3B4252")
-	colorTreeCursor = lipgloss.Color("#585B70") // brighter than dim, clearly highlights the row
-	colorMatch      = lipgloss.Color("#735C00") // muted amber for search matches
-	colorMuted   = lipgloss.Color("#5C6370")
-	colorDim     = lipgloss.Color("#3B4048")
-	colorText    = lipgloss.Color("#C8CCD4")
-	colorWarn    = lipgloss.Color("#E5C07B")
-	colorHeading = lipgloss.Color("#E5C07B")
-	colorCode    = lipgloss.Color("#98C379")
-	colorLink    = lipgloss.Color("#61AFEF")
+	colorBg          lipgloss.Color
+	colorFg          lipgloss.Color
+	colorMuted       lipgloss.Color
+	colorDim         lipgloss.Color
+	colorAccent      lipgloss.Color
+	colorHeading     lipgloss.Color
+	colorCode        lipgloss.Color
+	colorLink        lipgloss.Color
+	colorQuote       lipgloss.Color
+	colorSelection   lipgloss.Color
+	colorMatch       lipgloss.Color
+	colorMatchFg     lipgloss.Color
+	colorTreeCursor  lipgloss.Color
+	colorCodeBlockBg lipgloss.Color
+	colorCursorLine  lipgloss.Color
+	colorStatus      lipgloss.Color
+	colorWarn        = lipgloss.Color("#E5C07B") // legacy — used for dirty marker
+	colorText        lipgloss.Color              // alias for colorFg
+
+	styleStatusBar        lipgloss.Style
+	styleStatusMode       lipgloss.Style
+	styleStatusDirty      lipgloss.Style
+	styleLineNumber       lipgloss.Style
+	styleCursorLineNumber lipgloss.Style
+
+	styleHeading lipgloss.Style
+	styleBold    lipgloss.Style
+	styleItalic  lipgloss.Style
+	styleCode    lipgloss.Style
+	styleLink    lipgloss.Style
+	styleQuote   lipgloss.Style
+	styleListBul lipgloss.Style
+
+	styleTreeFolder lipgloss.Style
+	styleTreeFile   lipgloss.Style
+	styleTreeCursor lipgloss.Style
+
+	stylePickerBox    lipgloss.Style
+	stylePickerCursor lipgloss.Style
 )
 
-var (
-	styleStatusBar = lipgloss.NewStyle().
-			Foreground(colorMuted).
-			Padding(0, 1)
+func init() {
+	rebuildStyles()
+}
 
-	styleStatusMode = lipgloss.NewStyle().
-			Foreground(colorAccent).
-			Bold(true)
+func rebuildStyles() {
+	colorBg = lipgloss.Color(active.bg)
+	colorFg = lipgloss.Color(active.fg)
+	colorText = colorFg
+	colorMuted = lipgloss.Color(active.muted)
+	colorDim = lipgloss.Color(active.dim)
+	colorAccent = lipgloss.Color(active.accent)
+	colorHeading = lipgloss.Color(active.heading)
+	colorCode = lipgloss.Color(active.codeInline)
+	colorLink = lipgloss.Color(active.link)
+	colorQuote = lipgloss.Color(active.quote)
+	colorSelection = lipgloss.Color(active.selection)
+	colorMatch = lipgloss.Color(active.matchBg)
+	colorMatchFg = lipgloss.Color(active.matchFg)
+	colorTreeCursor = lipgloss.Color(active.treeCursor)
+	colorCodeBlockBg = lipgloss.Color(active.codeBlockBg)
+	colorCursorLine = lipgloss.Color(active.cursorLine)
+	colorStatus = lipgloss.Color(active.statusFg)
 
-	styleStatusDirty = lipgloss.NewStyle().
-				Foreground(colorWarn)
+	styleStatusBar = lipgloss.NewStyle().Foreground(colorMuted).Padding(0, 1)
+	styleStatusMode = lipgloss.NewStyle().Foreground(colorStatus).Bold(true)
+	styleStatusDirty = lipgloss.NewStyle().Foreground(colorWarn)
 
 	styleLineNumber = lipgloss.NewStyle().
-			Foreground(colorDim).
-			Width(4).
-			Align(lipgloss.Right).
-			MarginRight(1)
+		Foreground(colorDim).
+		Width(4).
+		Align(lipgloss.Right).
+		MarginRight(1)
 
 	styleCursorLineNumber = lipgloss.NewStyle().
-				Foreground(colorMuted).
-				Width(4).
-				Align(lipgloss.Right).
-				MarginRight(1)
+		Foreground(colorMuted).
+		Width(4).
+		Align(lipgloss.Right).
+		MarginRight(1)
 
 	styleHeading = lipgloss.NewStyle().Foreground(colorHeading).Bold(true)
-	styleBold    = lipgloss.NewStyle().Foreground(colorText).Bold(true)
-	styleItalic  = lipgloss.NewStyle().Foreground(colorText).Italic(true)
-	styleCode    = lipgloss.NewStyle().Foreground(colorCode)
-	styleLink    = lipgloss.NewStyle().Foreground(colorLink).Underline(true)
-	styleQuote   = lipgloss.NewStyle().Foreground(colorMuted).Italic(true)
+	styleBold = lipgloss.NewStyle().Foreground(colorFg).Bold(true)
+	styleItalic = lipgloss.NewStyle().Foreground(colorFg).Italic(true)
+	styleCode = lipgloss.NewStyle().Foreground(colorCode)
+	styleLink = lipgloss.NewStyle().Foreground(colorLink).Underline(true)
+	styleQuote = lipgloss.NewStyle().Foreground(colorQuote).Italic(true)
 	styleListBul = lipgloss.NewStyle().Foreground(colorAccent)
 
 	styleTreeFolder = lipgloss.NewStyle().Foreground(colorAccent)
-	styleTreeFile   = lipgloss.NewStyle().Foreground(colorText)
-	styleTreeCursor = lipgloss.NewStyle().Foreground(colorText).Background(colorTreeCursor).Bold(true)
+	styleTreeFile = lipgloss.NewStyle().Foreground(colorFg)
+	styleTreeCursor = lipgloss.NewStyle().Foreground(colorFg).Background(colorTreeCursor).Bold(true)
 
 	stylePickerBox = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(colorMuted).
-			Padding(0, 1)
-	stylePickerCursor = lipgloss.NewStyle().Foreground(colorText).Background(colorDim)
-)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorMuted).
+		Padding(0, 1)
+	stylePickerCursor = lipgloss.NewStyle().Foreground(colorFg).Background(colorTreeCursor)
+}
+
+// withBg wraps the supplied style with the editor background, if the active
+// theme defines one. Used so light / sepia themes paint a coherent
+// background even on a dark terminal.
+func withBg(s lipgloss.Style) lipgloss.Style {
+	if active.bg == "" {
+		return s
+	}
+	return s.Background(colorBg)
+}

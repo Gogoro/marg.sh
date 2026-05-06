@@ -24,6 +24,15 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 
 - **Code in markdown gets the full Chroma highlighter treatment.** ` ```go ` colors keywords, strings, comments, function names. Blocks without a language tag are auto-detected. Most TUI markdown editors color the fenced block uniformly green; marg actually parses the code.
 
+## Reading-grade typography in a terminal
+
+- **Hanging indents on wrapped list items.** When a bullet wraps, the continuation aligns under the content, not the dash. Most TUIs (and most code editors) wrap to column 0; marg wraps to where the prose actually started.
+- **Vertical rhythm around headings.** A synthetic blank line is rendered above every heading so sections breathe — even if the source markdown didn't include one.
+- **Subtle code-block backgrounds.** Fenced blocks get a tinted region across the full row width so they read as a separate kind of content. Cursor / selection / search-match still layer cleanly on top.
+- **Cursorline.** A barely-perceptible background tint on the cursor's row, like Obsidian and good IDEs.
+- **`:zen`** drops the status bar so the page is just text.
+- **Three curated themes** (dark, light, sepia) — each palette designed independently, not just inverted. Light and sepia paint an opaque background so they read correctly even in a dark terminal window.
+
 ## Auto-reload on external edits
 
 - **The open file reloads itself when something else writes to it** (Claude Code in another tmux pane, a save from your IDE, a `git checkout`, etc.). marg watches the file via fsnotify; if your buffer is clean, the reload is silent. If you have unsaved changes it just flashes a warning instead of clobbering — you choose with `:e!` (discard) or `:w` (overwrite). Same idea as Neovim's `autoread`, on by default.
