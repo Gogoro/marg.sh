@@ -1,0 +1,21 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "b03a154aad4d4d1a97ff84f0b8a3174c339ab688582980e9af3e1a2b1b369e9d"
+build_start_time: [1778085640, 931628000]
+build_end_time: [1778085644, 454421000]
+inputs:
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/App.swift": [1778052435, 491005523]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/AppState.swift": [1778063176, 678672212]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/CodeHighlighter.swift": [1778060808, 631939019]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/ContentView.swift": [1778052430, 152360486]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileNode.swift": [1778050636, 315814184]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileTreeView.swift": [1778062376, 112113627]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileTreeWalker.swift": [1778061801, 2148118]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileWatcher.swift": [1778050721, 885609068]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FuzzyMatcher.swift": [1778050696, 529436363]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FuzzyPicker.swift": [1778051757, 120454335]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/IgnoredFoldersView.swift": [1778052427, 503167113]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/MarkdownEditor.swift": [1778063007, 316230369]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/MarkdownStyler.swift": [1778071011, 731999745]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/TableFormatter.swift": [1778063249, 312468111]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/Theme.swift": [1778062991, 767306215]
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/VimMode.swift": [1778050868, 671436517]

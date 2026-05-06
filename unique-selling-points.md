@@ -44,8 +44,9 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 
 - **`*` / `_` / `` ` `` in visual mode wrap the selection in `**bold**`, `_italic_`, `` `code` ``.** No surround-plugin to install. The keys you'd reach for already do the right thing.
 - **`:H1` … `:H6` (and `:H0` to remove) toggle the current line's heading level**, preserving indentation. Most editors make you select-the-line-and-prepend manually.
-- **List continuation on Enter** carries `-`, `*`, `+`, or auto-incremented numbered bullets. Pressing Enter on an empty bullet exits the list cleanly. Standard in GUI editors; rare in TUIs.
-- **Tables auto-pad on save.** Rough-typed rows like `|a|b|c|` get rewritten with proper column padding the moment you save, so the source itself looks like a real grid — alignment specs (`:---`, `:---:`, `---:`) preserved. Most editors render tables nicely in preview but leave the source ragged; marg cleans the source, so the file reads cleanly in any tool that opens it.
+- **List continuation on Enter** carries `-`, `*`, `+`, or auto-incremented numbered bullets, including `- [ ]` / `- [x]` checkbox items. Pressing Enter on an empty bullet exits the list cleanly. Standard in GUI editors; rare in TUIs.
+- **Hanging indent under the content of `- [ ]` checkbox items.** A wrapped todo continues under the text after the `]`, not under the dash — so long todos read as a single visual paragraph aligned to the content, the way Notion or a polished GUI editor does it.
+- **Frontmatter rendered as a calm block.** YAML frontmatter at the top of a file (`---` … `---`) renders with muted keys and body-color values, fences dimmed. So skill files, blog posts, and other markdown-with-frontmatter open with the metadata visually pushed back instead of competing with the content.
 
 ## Built for the dictation + AI workflow
 

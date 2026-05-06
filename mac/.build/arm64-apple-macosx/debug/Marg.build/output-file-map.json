@@ -1,0 +1,101 @@
+{
+  "": {
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/master.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/App.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/App.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/App.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/App~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/App.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/AppState.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/AppState.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/AppState.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/AppState~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/AppState.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/CodeHighlighter.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/CodeHighlighter.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/CodeHighlighter.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/CodeHighlighter~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/CodeHighlighter.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/ContentView.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/ContentView.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/ContentView.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/ContentView.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileNode.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileNode.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileNode.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileNode~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileNode.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileTreeView.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeView.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeView.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeView.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileTreeWalker.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeWalker.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeWalker.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeWalker~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileTreeWalker.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FileWatcher.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileWatcher.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileWatcher.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileWatcher~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FileWatcher.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FuzzyMatcher.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyMatcher.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyMatcher.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyMatcher~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyMatcher.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/FuzzyPicker.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyPicker.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyPicker.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyPicker~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/FuzzyPicker.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/IgnoredFoldersView.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/IgnoredFoldersView.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/IgnoredFoldersView.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/IgnoredFoldersView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/IgnoredFoldersView.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/MarkdownEditor.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownEditor.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownEditor.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownEditor~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownEditor.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/MarkdownStyler.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownStyler.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownStyler.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownStyler~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/MarkdownStyler.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/TableFormatter.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/TableFormatter.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/TableFormatter.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/TableFormatter~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/TableFormatter.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/Theme.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/Theme.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/Theme.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/Theme~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/Theme.swiftdeps"
+  },
+  "/Users/ole/work/iniva/marg/mac/Sources/Marg/VimMode.swift": {
+    "dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/VimMode.d",
+    "object": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/VimMode.swift.o",
+    "swiftmodule": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/VimMode~partial.swiftmodule",
+    "swift-dependencies": "/Users/ole/work/iniva/marg/mac/.build/arm64-apple-macosx/debug/Marg.build/VimMode.swiftdeps"
+  }
+}

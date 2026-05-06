@@ -1,28 +1,48 @@
 # marg
 
-A markdown reader/editor under the iniva brand. Two surfaces, one product.
-
-- `tui/` — the original Go + Bubble Tea + Lip Gloss terminal version
-- `mac/` — native macOS app in Swift (SwiftUI + AppKit), Swift Package Manager build
-
-Both surfaces share the same product idea: jump across every markdown file on the machine, vim keys, no cloud, no workspace setup. The TUI lives where developers work (terminal, tmux, alongside Claude Code). The Mac app gives the typography ceiling a TUI can't reach.
+A terminal markdown reader/editor under the iniva brand. Go + Bubble Tea + Lip Gloss.
 
 Codename — eventual product name TBD.
 
-## brand & feel
+## project layout
+
+- `main.go` — tiny shim that calls `marg.Run`
+- `internal/marg/` — flat package, all the actual code
+  - `app.go` — root Bubble Tea model, view dispatch, picker overlay
+  - `cli.go` — argument parsing
+  - `buffer.go` — line-based text buffer + cursor-safe edits
+  - `editor.go` — modal vim editor, soft-wrap, status bar
+  - `tree.go` — `:Ex`-style markdown-only file browser
+  - `picker.go` — `ctrl+p` fuzzy file picker
+  - `markdown.go` — line + inline markdown styling
+  - `config.go` — `~/.config/marg/config.toml` loader
+  - `styles.go` — single source of truth for colors / lipgloss styles
+  - `themes.go` — palettes (dark / light / sepia)
+
+## code style
+
+- Expressive, clear, written-out Go. Not clever. Not abstracted ahead of time.
+- Flat layout inside `internal/marg/`. Resist splitting into more sub-packages.
+- Full words over abbreviations.
+- No comments unless WHY is non-obvious.
+- No trailing summary docstrings or feature explanations in code — those go in README, USP doc, or commit messages.
+
+## build / run
+
+```bash
+go build -o marg .
+./marg                # super mode
+./marg .              # tree on cwd
+./marg some-file.md   # open file directly
+```
+
+Tests: `go test ./...` from the repo root.
+
+## the iniva brand
 
 This is an iniva tool, not a personal-labs tool. Polish to the level Odett is polished at: clean, restrained, designer-quality README and chrome.
 
-Do **not** import the rizz aesthetic (cheek, vibes, confetti). Different brand on purpose.
-
-## working in this repo
-
-Each surface has its own per-stack guide:
-
-- `tui/CLAUDE.md` — Go code style, project layout, build/test commands
-- `mac/CLAUDE.md` — Swift code style, project layout, build/test commands
-
-The shared cross-surface concerns live here.
+Clean and mean: one accent color, no emoji, no splash, every key has one job. Do **not** import the rizz aesthetic (cheek, vibes, confetti). Polish lives in the repo / README / install flow / landing page, not in the TUI chrome itself.
 
 ## unique-selling-points.md — keep this updated
 
@@ -34,15 +54,7 @@ Rules of thumb for what goes in:
 - **No**: standard editor features (it has search, it saves files, it has vim keys). Those aren't differentiators.
 - **Frame each bullet user-first**: lead with the user-visible behavior, then briefly say *why* it matters or what other tools do instead.
 
-If you remove a feature, remove its bullet. The list should always reflect what marg actually does today (across either surface).
-
-## code style (cross-surface)
-
-- Expressive, clear, written-out code. Not clever. Not abstracted ahead of time.
-- Full words over abbreviations.
-- No comments unless WHY is non-obvious.
-- No trailing summary docstrings or feature explanations in code — those go in README, USP doc, or commit messages.
-- Flat layouts inside each surface's source dir. Resist splitting into more sub-packages/modules.
+If you remove a feature, remove its bullet. The list should always reflect what marg actually does today.
 
 ## commit messages
 
@@ -50,4 +62,4 @@ Short, lowercase, no conventional-commit prefix. Match the iniva style: `add max
 
 ## todos
 
-Make sure to remind me about the `todos.md` file. There we have big and small things we should attack across both surfaces.
+Make sure to remind me about the `todos.md` file. There we have big and small things we should attack.
