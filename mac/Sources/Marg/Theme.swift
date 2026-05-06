@@ -48,6 +48,12 @@ enum Theme {
     static let codeBlockBackground = NSColor(srgbRed: 0.96, green: 0.96, blue: 0.94, alpha: 1)
     static let editorBackground = NSColor.white
 
+    static let syntaxKeywordColor = NSColor(srgbRed: 0.36, green: 0.30, blue: 0.63, alpha: 1)
+    static let syntaxTypeColor = NSColor(srgbRed: 0.10, green: 0.42, blue: 0.48, alpha: 1)
+    static let syntaxStringColor = NSColor(srgbRed: 0.37, green: 0.48, blue: 0.14, alpha: 1)
+    static let syntaxNumberColor = NSColor(srgbRed: 0.63, green: 0.32, blue: 0.18, alpha: 1)
+    static let syntaxCommentColor = NSColor(srgbRed: 0.55, green: 0.55, blue: 0.50, alpha: 1)
+
     // Color tokens for the SwiftUI side.
     static let editorBackgroundColor = Color.white
     static let sidebarBackgroundColor = Color(NSColor(srgbRed: 0.973, green: 0.969, blue: 0.961, alpha: 1))

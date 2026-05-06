@@ -19,6 +19,8 @@ enum MarkdownStyler {
 
         var lineStart = 0
         var insideCodeBlock = false
+        var fenceContentStart: Int? = nil
+        var fenceLanguage: String? = nil
 
         while lineStart < nsText.length {
             let lineRange = nsText.lineRange(for: NSRange(location: lineStart, length: 0))
@@ -29,6 +31,18 @@ enum MarkdownStyler {
             if trimmed.hasPrefix("```") {
                 storage.setAttributes(codeFenceAttributes(), range: lineRange)
                 storage.addAttribute(.margCodeBlock, value: true, range: lineRange)
+                if insideCodeBlock {
+                    if let blockStart = fenceContentStart {
+                        let blockRange = NSRange(location: blockStart, length: lineRange.location - blockStart)
+                        CodeHighlighter.highlight(in: storage, range: blockRange, languageHint: fenceLanguage)
+                    }
+                    fenceContentStart = nil
+                    fenceLanguage = nil
+                } else {
+                    let hint = String(trimmed.dropFirst(3)).trimmingCharacters(in: .whitespaces).lowercased()
+                    fenceLanguage = hint.isEmpty ? nil : hint
+                    fenceContentStart = NSMaxRange(lineRange)
+                }
                 insideCodeBlock.toggle()
             } else if insideCodeBlock {
                 storage.setAttributes(codeBlockAttributes(), range: lineRange)

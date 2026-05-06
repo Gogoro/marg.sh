@@ -22,8 +22,15 @@ final class MarkdownLayoutManager: NSLayoutManager {
         guard glyphs.length > 0 else { return }
 
         var union: NSRect?
-        enumerateLineFragments(forGlyphRange: glyphs) { lineRect, _, _, _, _ in
-            let translated = lineRect.offsetBy(dx: origin.x, dy: origin.y)
+        enumerateLineFragments(forGlyphRange: glyphs) { lineRect, usedRect, _, _, _ in
+            let widthRect = usedRect.width > 0 ? usedRect : lineRect
+            let measureRect = NSRect(
+                x: lineRect.minX,
+                y: lineRect.minY,
+                width: widthRect.width,
+                height: lineRect.height
+            )
+            let translated = measureRect.offsetBy(dx: origin.x, dy: origin.y)
             union = union.map { $0.union(translated) } ?? translated
         }
 
