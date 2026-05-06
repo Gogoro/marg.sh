@@ -7,19 +7,20 @@ struct MarkdownEditor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
+        scrollView.hasHorizontalScroller = true
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = true
         scrollView.backgroundColor = Theme.editorBackground
         scrollView.autohidesScrollers = true
+        scrollView.scrollerStyle = .overlay
 
         let textStorage = NSTextStorage()
         let layoutManager = MarkdownLayoutManager()
         textStorage.addLayoutManager(layoutManager)
 
-        let containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+        let containerSize = NSSize(width: Theme.containerWidth, height: CGFloat.greatestFiniteMagnitude)
         let textContainer = NSTextContainer(size: containerSize)
-        textContainer.widthTracksTextView = true
+        textContainer.widthTracksTextView = false
         textContainer.lineFragmentPadding = 0
         layoutManager.addTextContainer(textContainer)
 
@@ -38,11 +39,11 @@ struct MarkdownEditor: NSViewRepresentable {
         textView.isAutomaticLinkDetectionEnabled = false
         textView.isAutomaticDataDetectionEnabled = false
         textView.smartInsertDeleteEnabled = false
-        textView.isHorizontallyResizable = false
+        textView.isHorizontallyResizable = true
         textView.isVerticallyResizable = true
         textView.minSize = NSSize(width: 0, height: 0)
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        textView.autoresizingMask = [.width]
+        textView.autoresizingMask = []
         textView.textContainerInset = NSSize(
             width: Theme.editorHorizontalPadding,
             height: Theme.editorVerticalPadding
@@ -81,12 +82,15 @@ struct MarkdownEditor: NSViewRepresentable {
             coordinator.isApplyingExternalText = false
         }
 
-        let scrollWidth = scrollView.contentSize.width
-        if scrollWidth > 0 {
-            let availableForText = scrollWidth
-            let textWidth = min(Theme.maxContentWidth, max(0, availableForText - 2 * Theme.editorHorizontalPadding))
-            let totalSidePad = max(Theme.editorHorizontalPadding, (availableForText - textWidth) / 2)
-            textView.textContainerInset = NSSize(width: totalSidePad, height: Theme.editorVerticalPadding)
+        let visibleWidth = scrollView.contentSize.width
+        if visibleWidth > 0 {
+            let totalContentWidth = Theme.containerWidth + 2 * Theme.editorHorizontalPadding
+            let frameWidth = max(visibleWidth, totalContentWidth)
+            let extraSide = max(0, (frameWidth - totalContentWidth) / 2)
+            let inset = Theme.editorHorizontalPadding + extraSide
+            textView.textContainerInset = NSSize(width: inset, height: Theme.editorVerticalPadding)
+            textView.frame.size.width = frameWidth
+            textView.frame.size.height = max(textView.frame.size.height, scrollView.contentSize.height)
         }
     }
 
