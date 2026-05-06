@@ -1,4 +1,14 @@
-/marg
+# tui (Go)
+/tui/marg
 *.test
 *.out
+
+# mac (SwiftPM)
+/mac/.build/
+/mac/.swiftpm/
+/mac/Package.resolved
+*.xcodeproj
+DerivedData/
+
+# misc
 .DS_Store
