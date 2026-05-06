@@ -17,6 +17,7 @@ final class AppState: ObservableObject {
     @Published var quitRequested: Bool = false
     @Published var userIgnoredFolders: [String]
     @Published var showingIgnoredManager: Bool = false
+    @Published var isIndexing: Bool = false
 
     private let userIgnoredKey = "userIgnoredFolders"
     private let indexQueue = DispatchQueue(label: "marg.index", qos: .userInitiated)
@@ -35,6 +36,7 @@ final class AppState: ObservableObject {
         let generation = indexGeneration
         let root = rootURL
         let ignored = Set(userIgnoredFolders)
+        isIndexing = true
 
         indexQueue.async { [weak self] in
             let walker = FileTreeWalker(rootURL: root, userIgnored: ignored)
@@ -43,6 +45,7 @@ final class AppState: ObservableObject {
                 guard let self = self, self.indexGeneration == generation else { return }
                 self.fileTree = result.tree
                 self.allMarkdownFiles = result.flatFiles
+                self.isIndexing = false
             }
         }
     }

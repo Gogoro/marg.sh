@@ -26,15 +26,36 @@ struct FileTreeView: View {
             .padding(.bottom, 10)
 
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(appState.fileTree) { node in
-                        FileTreeNodeView(node: node, depth: 0)
+                if appState.isIndexing && appState.fileTree.isEmpty {
+                    IndexingPlaceholder(rootName: appState.rootURL.lastPathComponent)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 1) {
+                        ForEach(appState.fileTree) { node in
+                            FileTreeNodeView(node: node, depth: 0)
+                        }
                     }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 12)
                 }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 12)
             }
         }
+    }
+}
+
+private struct IndexingPlaceholder: View {
+    let rootName: String
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("scanning \(rootName)…")
+                .font(Theme.sidebarFont)
+                .foregroundColor(Theme.mutedTextColor)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 24)
+        .padding(.horizontal, 16)
     }
 }
 
