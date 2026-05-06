@@ -135,13 +135,18 @@ final class FileTreeWalker {
 
         let outputPipe = Pipe()
         process.standardOutput = outputPipe
-        process.standardError = Pipe()
+        process.standardError = FileHandle.nullDevice
 
         do {
             try process.run()
         } catch {
             return nil
         }
+
+        // Drain the pipe while the child is still running. With thousands of
+        // results, fd's output exceeds the kernel pipe buffer, so calling
+        // waitUntilExit() before reading would deadlock both processes.
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
 
         // fd exits 0 always. rg exits 0 with matches, 1 with no matches. Both fine.
@@ -149,7 +154,6 @@ final class FileTreeWalker {
             return nil
         }
 
-        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
         guard let output = String(data: data, encoding: .utf8) else { return nil }
 
         return output
