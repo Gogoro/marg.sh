@@ -28,9 +28,11 @@ enum MarkdownStyler {
 
             if trimmed.hasPrefix("```") {
                 storage.setAttributes(codeFenceAttributes(), range: lineRange)
+                storage.addAttribute(.margCodeBlock, value: true, range: lineRange)
                 insideCodeBlock.toggle()
             } else if insideCodeBlock {
                 storage.setAttributes(codeBlockAttributes(), range: lineRange)
+                storage.addAttribute(.margCodeBlock, value: true, range: lineRange)
             } else if let level = headingLevel(of: line) {
                 let attrs = headingAttributes(level: level)
                 storage.setAttributes(attrs, range: lineRange)
@@ -78,7 +80,7 @@ enum MarkdownStyler {
         return [
             .font: Theme.monoFont,
             .foregroundColor: Theme.mutedColor,
-            .paragraphStyle: codeParagraphStyle()
+            .paragraphStyle: codeFenceParagraphStyle()
         ]
     }
 
@@ -86,8 +88,7 @@ enum MarkdownStyler {
         return [
             .font: Theme.monoFont,
             .foregroundColor: Theme.bodyColor,
-            .backgroundColor: Theme.codeBlockBackground,
-            .paragraphStyle: codeParagraphStyle()
+            .paragraphStyle: codeBlockParagraphStyle()
         ]
     }
 
@@ -115,9 +116,16 @@ enum MarkdownStyler {
         return style
     }
 
-    private static func codeParagraphStyle() -> NSParagraphStyle {
+    private static func codeFenceParagraphStyle() -> NSParagraphStyle {
         let style = NSMutableParagraphStyle()
-        style.lineHeightMultiple = 1.2
+        style.lineHeightMultiple = 1.25
+        style.paragraphSpacingBefore = 6
+        return style
+    }
+
+    private static func codeBlockParagraphStyle() -> NSParagraphStyle {
+        let style = NSMutableParagraphStyle()
+        style.lineHeightMultiple = 1.3
         return style
     }
 

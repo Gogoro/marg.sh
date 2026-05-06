@@ -13,7 +13,17 @@ struct MarkdownEditor: NSViewRepresentable {
         scrollView.backgroundColor = Theme.editorBackground
         scrollView.autohidesScrollers = true
 
-        let textView = EditorTextView()
+        let textStorage = NSTextStorage()
+        let layoutManager = MarkdownLayoutManager()
+        textStorage.addLayoutManager(layoutManager)
+
+        let containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+        let textContainer = NSTextContainer(size: containerSize)
+        textContainer.widthTracksTextView = true
+        textContainer.lineFragmentPadding = 0
+        layoutManager.addTextContainer(textContainer)
+
+        let textView = EditorTextView(frame: .zero, textContainer: textContainer)
         textView.delegate = context.coordinator
         textView.coordinator = context.coordinator
         textView.appState = appState
@@ -33,8 +43,6 @@ struct MarkdownEditor: NSViewRepresentable {
         textView.minSize = NSSize(width: 0, height: 0)
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.autoresizingMask = [.width]
-        textView.textContainer?.widthTracksTextView = true
-        textView.textContainer?.lineFragmentPadding = 0
         textView.textContainerInset = NSSize(
             width: Theme.editorHorizontalPadding,
             height: Theme.editorVerticalPadding

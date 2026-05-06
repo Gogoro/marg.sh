@@ -12,7 +12,14 @@ final class FileTreeWalker {
         "node_modules", "vendor", "Pods", "Carthage",
         "target", "build", "dist", "DerivedData", "coverage",
         "Library", "Applications", "Pictures", "Movies", "Music",
-        "Public"
+        "Public",
+        // hidden noise we explicitly skip even though dot-dirs are allowed by default
+        ".git", ".svn", ".hg", ".cache", ".npm", ".yarn", ".pnpm",
+        ".gradle", ".nuget", ".dotnet", ".terraform",
+        ".next", ".nuxt", ".turbo", ".swiftpm", ".build",
+        ".Trash", ".Trashes", ".idea", ".vscode-server",
+        ".rustup", ".cargo", ".rbenv", ".pyenv", ".nvm", ".fnm",
+        ".local", ".bun", ".deno", ".docker"
     ]
 
     private let markdownExtensions: Set<String> = ["md", "markdown"]
@@ -32,7 +39,7 @@ final class FileTreeWalker {
         guard let entries = try? manager.contentsOfDirectory(
             at: url,
             includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
+            options: []
         ) else {
             return []
         }
@@ -40,13 +47,16 @@ final class FileTreeWalker {
         var directories: [URL] = []
         var files: [URL] = []
         for entry in entries {
+            let name = entry.lastPathComponent
             let isDirectory = (try? entry.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
             if isDirectory {
-                if !ignoredDirectoryNames.contains(entry.lastPathComponent) {
-                    directories.append(entry)
+                if ignoredDirectoryNames.contains(name) { continue }
+                directories.append(entry)
+            } else {
+                if name.hasPrefix(".") { continue }
+                if markdownExtensions.contains(entry.pathExtension.lowercased()) {
+                    files.append(entry)
                 }
-            } else if markdownExtensions.contains(entry.pathExtension.lowercased()) {
-                files.append(entry)
             }
         }
 
