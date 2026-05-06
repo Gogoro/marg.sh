@@ -15,7 +15,7 @@ struct MarkdownEditor: NSViewRepresentable {
         scrollView.scrollerStyle = .overlay
 
         let textStorage = NSTextStorage()
-        let layoutManager = MarkdownLayoutManager()
+        let layoutManager = NSLayoutManager()
         textStorage.addLayoutManager(layoutManager)
 
         let containerSize = NSSize(width: Theme.containerWidth, height: CGFloat.greatestFiniteMagnitude)

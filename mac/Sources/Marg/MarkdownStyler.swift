@@ -30,7 +30,6 @@ enum MarkdownStyler {
 
             if trimmed.hasPrefix("```") {
                 storage.setAttributes(codeFenceAttributes(), range: lineRange)
-                storage.addAttribute(.margCodeBlock, value: true, range: lineRange)
                 if insideCodeBlock {
                     if let blockStart = fenceContentStart {
                         let blockRange = NSRange(location: blockStart, length: lineRange.location - blockStart)
@@ -46,7 +45,6 @@ enum MarkdownStyler {
                 insideCodeBlock.toggle()
             } else if insideCodeBlock {
                 storage.setAttributes(codeBlockAttributes(), range: lineRange)
-                storage.addAttribute(.margCodeBlock, value: true, range: lineRange)
             } else if let level = headingLevel(of: line) {
                 let attrs = headingAttributes(level: level)
                 storage.setAttributes(attrs, range: lineRange)
@@ -106,10 +104,6 @@ enum MarkdownStyler {
         ]
     }
 
-    // Prose-class paragraphs share a tail indent that pulls them in to maxContentWidth even when
-    // the underlying container is much wider. Code paragraphs leave tailIndent at 0 so lines
-    // extend across the full container — long lines reveal themselves via horizontal scroll
-    // instead of wrapping awkwardly.
     private static let proseTailIndent: CGFloat = -(Theme.containerWidth - Theme.maxContentWidth)
 
     private static func bodyParagraphStyle() -> NSParagraphStyle {
@@ -144,6 +138,7 @@ enum MarkdownStyler {
         style.lineHeightMultiple = 1.25
         style.paragraphSpacingBefore = 6
         style.lineBreakMode = .byCharWrapping
+        style.tailIndent = proseTailIndent
         return style
     }
 
@@ -151,6 +146,7 @@ enum MarkdownStyler {
         let style = NSMutableParagraphStyle()
         style.lineHeightMultiple = 1.3
         style.lineBreakMode = .byCharWrapping
+        style.tailIndent = proseTailIndent
         return style
     }
 

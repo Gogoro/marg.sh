@@ -45,7 +45,6 @@ enum Theme {
     static let mutedColor = NSColor(srgbRed: 0.78, green: 0.78, blue: 0.76, alpha: 1)
     static let codeColor = NSColor(srgbRed: 0.78, green: 0.30, blue: 0.45, alpha: 1)
     static let linkColor = NSColor(srgbRed: 0.15, green: 0.39, blue: 0.92, alpha: 1)
-    static let codeBlockBackground = NSColor(srgbRed: 0.96, green: 0.96, blue: 0.94, alpha: 1)
     static let editorBackground = NSColor.white
 
     static let syntaxKeywordColor = NSColor(srgbRed: 0.36, green: 0.30, blue: 0.63, alpha: 1)

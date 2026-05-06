@@ -6,6 +6,21 @@ enum CodeHighlighter {
         let types: Set<String>
         let lineCommentTokens: [String]
         let stringDelimiters: Set<unichar>
+        let caseInsensitive: Bool
+
+        init(
+            keywords: Set<String>,
+            types: Set<String>,
+            lineCommentTokens: [String],
+            stringDelimiters: Set<unichar>,
+            caseInsensitive: Bool = false
+        ) {
+            self.keywords = keywords
+            self.types = types
+            self.lineCommentTokens = lineCommentTokens
+            self.stringDelimiters = stringDelimiters
+            self.caseInsensitive = caseInsensitive
+        }
     }
 
     static func highlight(in storage: NSTextStorage, range: NSRange, languageHint: String?) {
@@ -24,6 +39,7 @@ enum CodeHighlighter {
         case "sh", "bash", "shell", "zsh": return bash
         case "json": return json
         case "yaml", "yml": return yaml
+        case "sql", "postgres", "postgresql", "psql", "mysql", "sqlite": return sql
         default: return nil
         }
     }
@@ -63,9 +79,10 @@ enum CodeHighlighter {
             if isIdentifierStart(character) {
                 let identifierEnd = consumeIdentifier(source: source, from: index, end: end)
                 let word = source.substring(with: NSRange(location: index, length: identifierEnd - index))
-                if language.keywords.contains(word) {
+                let lookupWord = language.caseInsensitive ? word.lowercased() : word
+                if language.keywords.contains(lookupWord) {
                     paint(storage, range: NSRange(location: index, length: identifierEnd - index), color: Theme.syntaxKeywordColor)
-                } else if language.types.contains(word) {
+                } else if language.types.contains(lookupWord) {
                     paint(storage, range: NSRange(location: index, length: identifierEnd - index), color: Theme.syntaxTypeColor)
                 }
                 index = identifierEnd
@@ -301,5 +318,40 @@ enum CodeHighlighter {
         types: [],
         lineCommentTokens: ["#"],
         stringDelimiters: [doubleQuote, singleQuote]
+    )
+
+    static let sql = Language(
+        keywords: [
+            "select", "from", "where", "and", "or", "not", "in", "like", "ilike", "between",
+            "is", "null", "as", "distinct", "all", "any", "some", "exists",
+            "insert", "into", "values", "update", "set", "delete", "returning",
+            "create", "table", "alter", "drop", "rename", "truncate",
+            "index", "view", "sequence", "schema", "database", "extension",
+            "unique", "primary", "key", "foreign", "references", "on", "default", "check",
+            "constraint", "cascade", "restrict", "deferrable", "initially", "deferred", "immediate",
+            "join", "left", "right", "inner", "outer", "full", "cross", "lateral", "using", "natural",
+            "group", "by", "having", "order", "asc", "desc", "limit", "offset", "fetch", "first", "rows", "only",
+            "if", "then", "else", "elsif", "end", "case", "when",
+            "with", "recursive", "union", "intersect", "except",
+            "begin", "commit", "rollback", "savepoint", "transaction", "isolation", "level",
+            "grant", "revoke", "usage", "to", "for", "of",
+            "true", "false", "unknown",
+            "function", "procedure", "trigger", "language", "returns", "execute",
+            "declare", "do", "perform", "raise"
+        ],
+        types: [
+            "int", "integer", "bigint", "smallint", "tinyint", "serial", "bigserial",
+            "boolean", "bool", "bit",
+            "text", "varchar", "char", "character", "varying",
+            "bytea", "blob",
+            "date", "time", "timestamp", "timestamptz", "interval",
+            "decimal", "numeric", "real", "double", "precision", "float", "money",
+            "json", "jsonb", "xml",
+            "uuid", "inet", "cidr", "macaddr",
+            "array", "enum", "point", "line", "polygon"
+        ],
+        lineCommentTokens: ["--"],
+        stringDelimiters: [singleQuote],
+        caseInsensitive: true
     )
 }
