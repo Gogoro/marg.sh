@@ -18,6 +18,7 @@ final class AppState: ObservableObject {
     @Published var userIgnoredFolders: [String]
     @Published var showingIgnoredManager: Bool = false
     @Published var isIndexing: Bool = false
+    @Published var collapsedDirectories: Set<URL> = []
 
     private let userIgnoredKey = "userIgnoredFolders"
     private let indexQueue = DispatchQueue(label: "marg.index", qos: .userInitiated)
@@ -108,6 +109,7 @@ final class AppState: ObservableObject {
     func loadFile(_ url: URL) {
         do {
             let content = try String(contentsOf: url, encoding: .utf8)
+            expandAncestors(of: url)
             self.text = content
             self.currentFileURL = url
             self.isDirty = false
@@ -116,6 +118,26 @@ final class AppState: ObservableObject {
             flashStatus("opened \(url.lastPathComponent)")
         } catch {
             flashStatus("open failed: \(error.localizedDescription)")
+        }
+    }
+
+    func toggleDirectoryCollapsed(_ url: URL) {
+        if collapsedDirectories.contains(url) {
+            collapsedDirectories.remove(url)
+        } else {
+            collapsedDirectories.insert(url)
+        }
+    }
+
+    private func expandAncestors(of fileURL: URL) {
+        let rootPath = rootURL.path
+        var ancestor = fileURL.deletingLastPathComponent()
+        while ancestor.path.hasPrefix(rootPath) {
+            collapsedDirectories.remove(ancestor)
+            if ancestor.path == rootPath { break }
+            let parent = ancestor.deletingLastPathComponent()
+            if parent.path == ancestor.path { break }
+            ancestor = parent
         }
     }
 

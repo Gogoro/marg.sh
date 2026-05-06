@@ -25,17 +25,27 @@ struct FileTreeView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 10)
 
-            ScrollView {
-                if appState.isIndexing && appState.fileTree.isEmpty {
-                    IndexingPlaceholder(rootName: appState.rootURL.lastPathComponent)
-                } else {
-                    LazyVStack(alignment: .leading, spacing: 1) {
-                        ForEach(appState.fileTree) { node in
-                            FileTreeNodeView(node: node, depth: 0)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if appState.isIndexing && appState.fileTree.isEmpty {
+                        IndexingPlaceholder(rootName: appState.rootURL.lastPathComponent)
+                    } else {
+                        LazyVStack(alignment: .leading, spacing: 1) {
+                            ForEach(appState.fileTree) { node in
+                                FileTreeNodeView(node: node, depth: 0)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 12)
+                    }
+                }
+                .onChange(of: appState.currentFileURL) { _, newURL in
+                    guard let url = newURL else { return }
+                    DispatchQueue.main.async {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(url, anchor: .center)
                         }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 12)
                 }
             }
         }
@@ -64,13 +74,16 @@ private struct FileTreeNodeView: View {
     let node: FileNode
     let depth: Int
 
-    @State private var expanded: Bool = true
     @State private var hovered: Bool = false
+
+    private var isExpanded: Bool {
+        !appState.collapsedDirectories.contains(node.url)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             row
-            if node.isDirectory && expanded, let children = node.children {
+            if node.isDirectory && isExpanded, let children = node.children {
                 ForEach(children) { child in
                     FileTreeNodeView(node: child, depth: depth + 1)
                 }
@@ -83,7 +96,7 @@ private struct FileTreeNodeView: View {
             Color.clear.frame(width: CGFloat(depth) * 14)
 
             if node.isDirectory {
-                Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundColor(Theme.mutedTextColor)
                     .frame(width: 12)
@@ -107,7 +120,7 @@ private struct FileTreeNodeView: View {
         .onHover { hovered = $0 }
         .onTapGesture {
             if node.isDirectory {
-                expanded.toggle()
+                appState.toggleDirectoryCollapsed(node.url)
             } else {
                 appState.loadFile(node.url)
             }
@@ -127,6 +140,7 @@ private struct FileTreeNodeView: View {
                 }
             }
         }
+        .id(node.url)
     }
 
     private var textColor: Color {
