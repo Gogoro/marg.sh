@@ -24,6 +24,10 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 
 - **Code in markdown gets the full Chroma highlighter treatment.** ` ```go ` colors keywords, strings, comments, function names. Blocks without a language tag are auto-detected. Most TUI markdown editors color the fenced block uniformly green; marg actually parses the code.
 
+## Auto-reload on external edits
+
+- **The open file reloads itself when something else writes to it** (Claude Code in another tmux pane, a save from your IDE, a `git checkout`, etc.). marg watches the file via fsnotify; if your buffer is clean, the reload is silent. If you have unsaved changes it just flashes a warning instead of clobbering — you choose with `:e!` (discard) or `:w` (overwrite). Same idea as Neovim's `autoread`, on by default.
+
 ## Markdown-native edit shortcuts
 
 - **`*` / `_` / `` ` `` in visual mode wrap the selection in `**bold**`, `_italic_`, `` `code` ``.** No surround-plugin to install. The keys you'd reach for already do the right thing.

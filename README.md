@@ -130,7 +130,7 @@ Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax hi
 | `p` / `P`      | paste after / before cursor (or below/above for line-wise) |
 | `v` / `V`      | visual / visual-line selection mode   |
 | `/`            | search forward (then `n` / `N` to repeat) |
-| `:`            | command line (`:w`, `:q`, `:wq`, `:Ex`, `:H1..:H6`, `:s/…`, `:%s/…`) |
+| `:`            | command line (`:w`, `:q`, `:wq`, `:e`, `:e!`, `:Ex`, `:H1..:H6`, `:s/…`, `:%s/…`) |
 | `ctrl+s`       | save                                  |
 
 ### editor — visual mode (`v` / `V`)

@@ -68,6 +68,11 @@ type app struct {
 	// project-scoped picker.
 	superMode bool
 
+	// watcher follows the currently open file on disk so external edits
+	// (e.g. Claude Code rewriting the file in another tmux pane) trigger
+	// an auto-reload.
+	watcher *fileWatcher
+
 	view    view
 	editor  editor
 	tree    tree
@@ -99,6 +104,7 @@ func initialModel(target startTarget, cfg Config) (app, error) {
 			return a, err
 		}
 		a.editor = ed
+		a.watcher = newFileWatcher(target.path)
 		a.view = viewEditor
 	case targetSuper:
 		// No specific project; the editor sits idle until a file is picked.
@@ -126,10 +132,14 @@ func initialModel(target startTarget, cfg Config) (app, error) {
 }
 
 func (a app) Init() tea.Cmd {
+	var cmds []tea.Cmd
 	if a.superMode {
-		return indexCmd(a.cfg.SuperRoots)
+		cmds = append(cmds, indexCmd(a.cfg.SuperRoots))
 	}
-	return nil
+	if a.watcher != nil {
+		cmds = append(cmds, a.watcher.nextEventCmd())
+	}
+	return tea.Batch(cmds...)
 }
 
 // indexCmd kicks off a super-mode walk in the background. The result lands
@@ -178,7 +188,22 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.editor.resize(a.width, a.editorContentHeight())
 		a.view = viewEditor
 		a.picking = false
-		return a, nil
+		// Swap in a watcher for the newly opened file.
+		a.watcher.close()
+		a.watcher = newFileWatcher(string(m))
+		var cmd tea.Cmd
+		if a.watcher != nil {
+			cmd = a.watcher.nextEventCmd()
+		}
+		return a, cmd
+
+	case fileChangedMsg:
+		a.handleFileChanged()
+		var cmd tea.Cmd
+		if a.watcher != nil {
+			cmd = a.watcher.nextEventCmd()
+		}
+		return a, cmd
 
 	case quitMsg:
 		a.quitting = true
@@ -300,6 +325,36 @@ func (a app) renderStatusBar() string {
 		return a.editor.statusBar(a.width, a.statusMessage)
 	}
 	return a.tree.statusBar(a.width, a.statusMessage)
+}
+
+// handleFileChanged is called when the watcher reports the open file was
+// touched on disk. If the buffer has unsaved changes, we don't clobber them
+// — we just flash a warning. Otherwise we silently reload from disk so the
+// user picks up edits that happened in another pane.
+func (a *app) handleFileChanged() {
+	path := a.editor.filepath
+	if path == "" {
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		// File might have been deleted or temporarily missing during an
+		// atomic rename; just ignore.
+		return
+	}
+	if string(data) == a.editor.buf.toString() {
+		// Same content (likely our own save echoing back).
+		return
+	}
+	if a.editor.dirty {
+		a.editor.flash = "file changed on disk — :e! to discard local changes"
+		return
+	}
+	a.editor.buf = bufferFromString(string(data))
+	a.editor.clampCursor()
+	a.editor.scrollToCursor()
+	a.editor.flash = "reloaded from disk"
+	a.editor.recordChange()
 }
 
 // --- messages ---

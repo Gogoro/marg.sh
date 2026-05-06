@@ -615,6 +615,14 @@ func (e *editor) runCommand(cmd string) tea.Cmd {
 		e.runSubstitute(cmd[2:], e.row, e.row)
 		return nil
 	}
+	if cmd == "e" {
+		e.reloadFromDisk(false)
+		return nil
+	}
+	if cmd == "e!" {
+		e.reloadFromDisk(true)
+		return nil
+	}
 	if strings.HasPrefix(cmd, "%s/") {
 		e.runSubstitute(cmd[3:], 0, e.buf.lineCount()-1)
 		return nil
@@ -663,6 +671,30 @@ func (e *editor) runSubstitute(arg string, startRow, endRow int) {
 	e.clampCursor()
 	e.recordChange()
 	e.flash = fmt.Sprintf("substituted in %d line(s)", changed)
+}
+
+// reloadFromDisk replaces the buffer with the file's current on-disk
+// content. Without `force`, it refuses if there are unsaved changes.
+func (e *editor) reloadFromDisk(force bool) {
+	if e.filepath == "" {
+		e.flash = "no file to reload"
+		return
+	}
+	data, err := os.ReadFile(e.filepath)
+	if err != nil {
+		e.flash = "reload failed: " + err.Error()
+		return
+	}
+	if !force && e.dirty {
+		e.flash = "no write since change (use :e! to force)"
+		return
+	}
+	e.buf = bufferFromString(string(data))
+	e.dirty = false
+	e.clampCursor()
+	e.scrollToCursor()
+	e.recordChange()
+	e.flash = "reloaded"
 }
 
 // --- save ---
