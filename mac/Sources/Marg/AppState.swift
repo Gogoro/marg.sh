@@ -28,6 +28,12 @@ final class AppState: ObservableObject {
     init() {
         self.rootURL = FileManager.default.homeDirectoryForCurrentUser
         self.userIgnoredFolders = UserDefaults.standard.stringArray(forKey: "userIgnoredFolders") ?? []
+
+        let warmStartWalker = FileTreeWalker(rootURL: rootURL, userIgnored: Set(userIgnoredFolders))
+        if let cached = warmStartWalker.loadCachedResult() {
+            self.fileTree = cached.tree
+            self.allMarkdownFiles = cached.flatFiles
+        }
         refreshIndex()
     }
 
