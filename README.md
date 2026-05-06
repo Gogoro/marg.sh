@@ -187,13 +187,16 @@ max_width = 80
 # on a wide monitor: 160.
 center_above = 0
 
-# Chroma style used for syntax highlighting inside fenced code blocks.
-# Default: monokai. High-contrast, easy to read.
-# Other popular options:
-#   "dracula", "github-dark", "tokyo-night", "onedark", "gruvbox", "nord",
-#   "solarized-dark", "catppuccin-mocha", "rose-pine"
-# Full list: `chroma --list` (any chroma style name works).
-code_theme = "monokai"
+# Theme for syntax highlighting inside fenced code blocks.
+#   "ansi"  → uses your terminal's bright ANSI colors (default).
+#            Keywords get bright magenta, strings yellow, comments grey,
+#            etc. Always readable because YOUR terminal theme picks the
+#            actual shades.
+#   "<name>" → any Chroma style name ("dracula", "monokai", "tokyo-night",
+#            "github-dark", "onedark", "gruvbox", "nord", "rose-pine", …).
+#            More color variety but depends on truecolor reaching marg
+#            cleanly (some tmux configs strip it).
+code_theme = "ansi"
 
 # Where super mode (running `marg` with no args) walks for markdown files.
 # Defaults to your home directory. Use `~` for HOME, or any absolute path.

@@ -45,7 +45,7 @@ type Config struct {
 }
 
 func defaultConfig() Config {
-	cfg := Config{MaxWidth: 0, CodeTheme: "monokai"}
+	cfg := Config{MaxWidth: 0, CodeTheme: "ansi"}
 	if home, err := os.UserHomeDir(); err == nil {
 		cfg.SuperRoots = []string{home}
 	}

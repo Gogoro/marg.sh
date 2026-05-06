@@ -24,11 +24,19 @@ type tokenSpan struct {
 	style    lipgloss.Style
 }
 
-// chromaStyle is the active Chroma palette. setCodeTheme swaps it once at
-// startup based on the user's `code_theme` config.
+// useAnsiPalette is true when the user wants marg to color code blocks with
+// the terminal's own ANSI bright colors (the default — guaranteed readable
+// because the terminal theme controls how vibrant they look). When false we
+// fall back to one of Chroma's curated styles.
+var useAnsiPalette = true
 var chromaStyle = mustLoadStyle("monokai")
 
 func setCodeTheme(name string) {
+	if name == "ansi" || name == "" {
+		useAnsiPalette = true
+		return
+	}
+	useAnsiPalette = false
 	chromaStyle = mustLoadStyle(name)
 }
 
@@ -147,9 +155,15 @@ func tokenizeBlock(spans map[int][]tokenSpan, buf *buffer, startRow, endRow int,
 	}
 }
 
-// lipglossStyleFor reads Chroma's style for the given token type and returns
-// an equivalent lipgloss.Style. Falls back to plain text if no entry exists.
+// lipglossStyleFor returns the style used to render `t`. In ANSI mode we map
+// token categories to the terminal's bright 8-color palette (which the
+// terminal's own theme decides how to display, so it always looks "right"
+// regardless of tmux truecolor config). In Chroma mode we read the loaded
+// style.
 func lipglossStyleFor(t chroma.TokenType) lipgloss.Style {
+	if useAnsiPalette {
+		return ansiStyleFor(t)
+	}
 	entry := chromaStyle.Get(t)
 	s := lipgloss.NewStyle()
 	if entry.Colour.IsSet() {
@@ -165,6 +179,57 @@ func lipglossStyleFor(t chroma.TokenType) lipgloss.Style {
 		s = s.Underline(true)
 	}
 	return s
+}
+
+// ansiStyleFor maps a Chroma token type to a lipgloss style using ANSI
+// bright color slots. lipgloss.Color("9") through ("15") select the
+// terminal's bright variants, which every modern terminal theme defines
+// to be highly visible — much more reliable than truecolor escapes that
+// tmux might downsample.
+func ansiStyleFor(t chroma.TokenType) lipgloss.Style {
+	const (
+		brightRed     = "9"
+		brightGreen   = "10"
+		brightYellow  = "11"
+		brightBlue    = "12"
+		brightMagenta = "13"
+		brightCyan    = "14"
+		brightGray    = "8"
+	)
+
+	switch t.Category() {
+	case chroma.Keyword:
+		// Keyword.Type and Keyword.Pseudo get cyan; everything else magenta.
+		switch t {
+		case chroma.KeywordType, chroma.KeywordPseudo, chroma.KeywordReserved:
+			return lipgloss.NewStyle().Foreground(lipgloss.Color(brightCyan)).Bold(true)
+		}
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(brightMagenta)).Bold(true)
+	case chroma.LiteralString:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(brightYellow))
+	case chroma.LiteralNumber, chroma.Literal:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(brightMagenta))
+	case chroma.Comment:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(brightGray)).Italic(true)
+	case chroma.Operator:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(brightMagenta))
+	case chroma.Name:
+		switch t {
+		case chroma.NameFunction, chroma.NameClass, chroma.NameDecorator:
+			return lipgloss.NewStyle().Foreground(lipgloss.Color(brightGreen))
+		case chroma.NameBuiltin, chroma.NameBuiltinPseudo, chroma.NameConstant:
+			return lipgloss.NewStyle().Foreground(lipgloss.Color(brightCyan))
+		case chroma.NameTag:
+			return lipgloss.NewStyle().Foreground(lipgloss.Color(brightRed))
+		}
+		return lipgloss.NewStyle()
+	case chroma.GenericInserted:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(brightGreen))
+	case chroma.GenericDeleted:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(brightRed))
+	}
+	_ = brightBlue
+	return lipgloss.NewStyle()
 }
 
 // styleAtCol returns the token-span style covering `col` in the given list,
