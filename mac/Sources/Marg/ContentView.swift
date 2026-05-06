@@ -29,6 +29,10 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.light)
+        .sheet(isPresented: $appState.showingIgnoredManager) {
+            IgnoredFoldersView()
+                .environmentObject(appState)
+        }
     }
 }
 

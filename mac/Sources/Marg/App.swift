@@ -112,6 +112,16 @@ final class MargAppDelegate: NSObject, NSApplicationDelegate {
         discardItem.target = self
         fileMenu.addItem(discardItem)
 
+        fileMenu.addItem(NSMenuItem.separator())
+
+        let manageIgnoreItem = NSMenuItem(
+            title: "Manage Ignored Folders…",
+            action: #selector(handleManageIgnored),
+            keyEquivalent: ""
+        )
+        manageIgnoreItem.target = self
+        fileMenu.addItem(manageIgnoreItem)
+
         mainMenu.addItem(fileMenuItem)
 
         let editMenuItem = NSMenuItem()
@@ -169,5 +179,9 @@ final class MargAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleDiscard() {
         appState.discardAndReload()
+    }
+
+    @objc private func handleManageIgnored() {
+        appState.showingIgnoredManager = true
     }
 }

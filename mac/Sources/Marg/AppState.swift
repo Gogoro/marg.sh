@@ -15,20 +15,45 @@ final class AppState: ObservableObject {
     @Published var statusMessage: String?
     @Published var commandLineBuffer: String = ""
     @Published var quitRequested: Bool = false
+    @Published var userIgnoredFolders: [String]
+    @Published var showingIgnoredManager: Bool = false
 
+    private let userIgnoredKey = "userIgnoredFolders"
     private var watcher: FileWatcher?
     private var statusClearTimer: Timer?
 
     init() {
         self.rootURL = FileManager.default.homeDirectoryForCurrentUser
+        self.userIgnoredFolders = UserDefaults.standard.stringArray(forKey: "userIgnoredFolders") ?? []
         refreshIndex()
     }
 
     func refreshIndex() {
-        let walker = FileTreeWalker(rootURL: rootURL)
+        let walker = FileTreeWalker(rootURL: rootURL, userIgnored: Set(userIgnoredFolders))
         let result = walker.walk()
         self.fileTree = result.tree
         self.allMarkdownFiles = result.flatFiles
+    }
+
+    func addIgnoredFolder(name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, !userIgnoredFolders.contains(trimmed) else { return }
+        userIgnoredFolders.append(trimmed)
+        userIgnoredFolders.sort()
+        persistIgnoreList()
+        refreshIndex()
+        flashStatus("ignoring '\(trimmed)'")
+    }
+
+    func removeIgnoredFolder(name: String) {
+        userIgnoredFolders.removeAll { $0 == name }
+        persistIgnoreList()
+        refreshIndex()
+        flashStatus("unignored '\(name)'")
+    }
+
+    private func persistIgnoreList() {
+        UserDefaults.standard.set(userIgnoredFolders, forKey: userIgnoredKey)
     }
 
     func loadFile(_ url: URL) {

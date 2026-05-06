@@ -7,6 +7,7 @@ struct FileTreeWalkResult {
 
 final class FileTreeWalker {
     let rootURL: URL
+    private let userIgnored: Set<String>
 
     private let ignoredDirectoryNames: Set<String> = [
         "node_modules", "vendor", "Pods", "Carthage",
@@ -24,8 +25,9 @@ final class FileTreeWalker {
 
     private let markdownExtensions: Set<String> = ["md", "markdown"]
 
-    init(rootURL: URL) {
+    init(rootURL: URL, userIgnored: Set<String> = []) {
         self.rootURL = rootURL
+        self.userIgnored = userIgnored
     }
 
     func walk() -> FileTreeWalkResult {
@@ -51,6 +53,7 @@ final class FileTreeWalker {
             let isDirectory = (try? entry.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
             if isDirectory {
                 if ignoredDirectoryNames.contains(name) { continue }
+                if userIgnored.contains(name) { continue }
                 directories.append(entry)
             } else {
                 if name.hasPrefix(".") { continue }

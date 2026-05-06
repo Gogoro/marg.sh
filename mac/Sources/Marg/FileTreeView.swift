@@ -91,6 +91,21 @@ private struct FileTreeNodeView: View {
                 appState.loadFile(node.url)
             }
         }
+        .contextMenu {
+            Button("Reveal in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([node.url])
+            }
+            if node.isDirectory {
+                Divider()
+                Button("Add '\(node.name)' to ignore list") {
+                    appState.addIgnoredFolder(name: node.name)
+                }
+                Divider()
+                Button("Manage Ignored Folders…") {
+                    appState.showingIgnoredManager = true
+                }
+            }
+        }
     }
 
     private var textColor: Color {
