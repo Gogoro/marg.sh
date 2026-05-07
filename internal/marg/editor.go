@@ -204,6 +204,16 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 			e.yankCurrentLine()
 			e.flash = "1 line yanked"
 			return e, nil
+		case pending == "r":
+			if key == "esc" {
+				return e, nil
+			}
+			if len(msg.Runes) == 1 && e.col < e.buf.lineLen(e.row) {
+				e.buf.lines[e.row][e.col] = msg.Runes[0]
+				e.dirty = true
+				e.recordChange()
+			}
+			return e, nil
 		}
 		// pending didn't match — fall through and handle key normally.
 	}
@@ -282,6 +292,8 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.row, e.col = e.buf.deleteRuneAt(e.row, e.col)
 		e.dirty = true
 		e.recordChange()
+	case "r":
+		e.pendingKey = "r"
 	case "d":
 		e.pendingKey = "d"
 	case "y":
@@ -541,6 +553,12 @@ func (e editor) updateVisual(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.dirty = true
 		e.mode = modeNormal
 		e.recordChange()
+	case "c":
+		e.insertSnapshot = e.captureSnapshot()
+		e.yankSelection()
+		e.deleteSelection()
+		e.dirty = true
+		e.mode = modeInsert
 	case "p":
 		// Replace selection with register contents.
 		e.deleteSelection()

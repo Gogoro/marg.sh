@@ -90,6 +90,69 @@ func TestUndoAfterDD(t *testing.T) {
 	}
 }
 
+func TestReplaceCharWithR(t *testing.T) {
+	e := newEditor("")
+	e.resize(80, 24)
+	e.buf = bufferFromString("hello")
+	e.initHistory()
+	e.history = nil
+	e.initHistory()
+
+	// cursor at col 0, replace 'h' with 'j'
+	e, _ = e.update(keyRunes("r"))
+	if e.pendingKey != "r" {
+		t.Fatalf("expected pendingKey=r, got %q", e.pendingKey)
+	}
+	e, _ = e.update(keyRunes("j"))
+	if got := e.buf.toString(); got != "jello" {
+		t.Fatalf("after r+j want %q, got %q", "jello", got)
+	}
+	if e.mode != modeNormal {
+		t.Fatalf("expected to stay in normal mode, got %v", e.mode)
+	}
+
+	// undo should restore
+	e, _ = e.update(keyRunes("u"))
+	if got := e.buf.toString(); got != "hello" {
+		t.Fatalf("after undo want %q, got %q", "hello", got)
+	}
+}
+
+func TestVisualChangeWithC(t *testing.T) {
+	e := newEditor("")
+	e.resize(80, 24)
+	e.buf = bufferFromString("hello world")
+	e.initHistory()
+	e.history = nil
+	e.initHistory()
+
+	// select "hello" (chars 0..4) then change
+	e, _ = e.update(keyRunes("v"))
+	for i := 0; i < 4; i++ {
+		e, _ = e.update(keyRunes("l"))
+	}
+	e, _ = e.update(keyRunes("c"))
+	if e.mode != modeInsert {
+		t.Fatalf("expected insert mode after c, got %v", e.mode)
+	}
+	if got := e.buf.toString(); got != " world" {
+		t.Fatalf("after vc want %q, got %q", " world", got)
+	}
+	for _, r := range "hi" {
+		e, _ = e.update(keyRunes(string(r)))
+	}
+	e, _ = e.update(keySpecial(tea.KeyEsc))
+	if got := e.buf.toString(); got != "hi world" {
+		t.Fatalf("after typing want %q, got %q", "hi world", got)
+	}
+
+	// undo collapses delete + insert into one entry
+	e, _ = e.update(keyRunes("u"))
+	if got := e.buf.toString(); got != "hello world" {
+		t.Fatalf("after undo want original, got %q", got)
+	}
+}
+
 func TestSoftWrapHardBreaksLongWord(t *testing.T) {
 	e := newEditor("")
 	e.resize(20, 10)
