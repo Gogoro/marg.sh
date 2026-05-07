@@ -2,25 +2,37 @@
 
 A terminal markdown editor. Word-doc feel, vim keys, no forever-long lines.
 
-> Codename — eventual product name TBD.
-
 <p align="center">
   <img src="assets/screenshots/editor-prose.png" alt="marg editing a journal entry with soft-wrapped prose" width="900"/>
 </p>
 
-## why
+## why I built this
 
-Most of my work lives in the terminal these days. Neovim is great for code, less great for prose: lines run to the horizon, no obvious file picker for "all my notes", no easy "browse folder of markdown" entry point. marg is a small, focused TUI that does just that:
+I work in the terminal all day. Tmux and Neovim are my daily drivers and I love them both.
 
-- soft-wrap that stops at the edge of your terminal — paragraphs read like a Word doc
-- vim keybindings (or arrow keys, both work)
-- VS Code-style fuzzy file picker (`ctrl+p`)
-- netrw-style file tree (`:Ex`) — markdown-only, recursive
-- pipe-friendly: `odett ... | marg` works (planned)
+Then Claude Code, Codex, and the rest of the agent harnesses showed up — and editing plan documents and markdown files quietly became a huge part of my day. Neovim is great for code and not great for prose: long lines run to the horizon, no centering on a wide monitor, no obvious way to jump between every `.md` file scattered across my machine.
+
+I wanted a markdown editing experience that felt natural. Zoom a tmux pane and the text centers itself. Paragraphs soft-wrap at a comfortable reading width instead of stretching across a 200-column terminal. Vim keys still work, because muscle memory is muscle memory.
+
+I also made it dead simple to discover every markdown file under `$HOME` — so I can edit a Claude skill in `~/.claude`, jump to a plan doc in some project, and back to my journal, all from the same fuzzy picker. That one habit has turbocharged my productivity in this AI era.
+
+This is an open source side project I made for myself. If you find it useful, you're welcome to use it, file issues, send patches.
+
+## what's different
+
+- **Find any markdown file on your machine, fast.** `marg` with no arguments opens a fuzzy picker over every `.md` under `$HOME`. Claude skills, project plans, todos, journal entries — all reachable in a few keystrokes.
+- **Reads what other tools just wrote.** Open a plan doc, let Claude Code edit it from another pane, and the buffer reloads silently. Switch git branches and the buffer reloads. Unsaved changes are protected — you get a warning, not a clobber.
+- **Prose-shaped wrapping.** Soft-wrap stops at the terminal width with an optional `max_width` cap below it. On a wide monitor, paragraphs stay at a comfortable reading column instead of stretching to the horizon. Code blocks and tables use a separate wider wrap so they don't get squished into the prose column.
+- **Vim keys *and* arrow keys, in every mode.** Modal navigation for muscle memory; arrows + delete + `ctrl+s` for everyone else. Both are first-class.
+- **Real syntax highlighting inside fenced code blocks.** Tree-sitter for SQL, Go, JavaScript, TypeScript, Rust, Python, Bash and YAML — same `@keyword` / `@function` / `@type` taxonomy Neovim uses. Chroma fallback for everything else, with auto-detection on untagged blocks.
+- **Markdown-only file tree.** `:Ex` walks recursively but hides folders that contain no markdown. Your notes vault is the whole tree; build artifacts and config files don't get in the way.
+- **No workspace setup.** `marg`, `marg ./notes`, `marg foo.md`, `marg new-file.md` (creates it). One binary, one job.
 
 ## install
 
 ```bash
+git clone https://github.com/Gogoro/marg.sh
+cd marg.sh
 go build -o marg .
 mv marg ~/.local/bin/   # or anywhere on $PATH
 ```
@@ -44,7 +56,7 @@ sudo apt install fd-find ripgrep
 sudo pacman -S fd ripgrep
 ```
 
-Marg works without either tool installed — you'll just see `indexing…` for noticeably longer the first time you launch super mode.
+marg works without either tool installed — you'll just see `indexing…` for noticeably longer the first time you launch super mode.
 
 ## usage
 
@@ -59,7 +71,7 @@ Super mode is the fastest way to jump to any note across all your projects — `
 
 ### file tree
 
-`marg` (or `marg .`) drops you straight into a recursive markdown-only tree. Folders without any `.md` files don't show up — your notes vault is the whole tree, the build artifacts and config files don't get in the way.
+`marg` (or `marg .`) drops you straight into a recursive markdown-only tree. Folders without any `.md` files don't show up.
 
 <p align="center">
   <img src="assets/screenshots/file-tree.png" alt="marg file tree showing journal, notes, and projects folders" width="900"/>
@@ -83,7 +95,7 @@ Headings, blockquotes, sub-headings, bullet lists, **bold**, *italic*, `inline c
 
 ### code blocks
 
-Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax highlighting via [Chroma](https://github.com/alecthomas/chroma) — keywords, strings, comments, numbers, function names, all colored. Blocks without a language tag are auto-detected when Chroma is confident; otherwise they render as plain text.
+Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax highlighting via tree-sitter for the languages marg ships with, and [Chroma](https://github.com/alecthomas/chroma) for the rest. Blocks without a language tag are auto-detected when Chroma is confident; otherwise they render as plain text.
 
 <p align="center">
   <img src="assets/screenshots/code-highlight.png" alt="syntax-highlighted Go and Python code blocks inside a markdown file" width="900"/>
@@ -247,12 +259,12 @@ A few small touches that add up:
 - **Vertical rhythm around headings.** A blank visual line is rendered above every heading so sections breathe.
 - **Subtle code-block backgrounds.** Fenced code blocks get a tinted region so they read as a separate kind of content without screaming.
 - **Cursorline.** The line under the cursor gets a barely-perceptible background tint so you don't lose your place when looking away.
-- **Centered text on wide monitors** via `center_above` (see config below).
+- **Centered text on wide monitors** via `center_above` (see config above).
 - **`:zen`** toggles a reading mode that hides the status bar — only text remains.
 
 ## recommended fonts
 
-Marg can't pick your terminal font for you, but a few work especially well for long-form prose:
+marg can't pick your terminal font for you, but a few work especially well for long-form prose:
 
 - **[iA Writer Mono S](https://github.com/iaolo/iA-Fonts)** — designed for prose. Slightly looser tracking, real italics, very calm.
 - **[Monaspace Neon](https://monaspace.githubnext.com/)** — GitHub's prose-leaning monospace. Pairs well with Krypton for code.
@@ -275,6 +287,10 @@ vhs demo/tape/wrap.tape     # max_width comparison
 
 PNGs land in `assets/screenshots/`.
 
-## status
+## contributing
 
-v1 — works for me. Lots to add (undo, find/replace, list helpers, dictation pipe).
+Issues and pull requests welcome. This is a small, opinionated tool — I'd rather keep the surface area narrow than grow into a full IDE — but bug reports, polish, new tree-sitter languages, and small ergonomic improvements are all fair game. Open an issue first if you're planning a larger change so we can talk through fit.
+
+## license
+
+MIT — see [LICENSE](LICENSE).

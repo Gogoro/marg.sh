@@ -1,8 +1,8 @@
 # marg
 
-A terminal markdown reader/editor under the iniva brand. Go + Bubble Tea + Lip Gloss.
+A terminal markdown reader/editor. Go + Bubble Tea + Lip Gloss.
 
-Codename — eventual product name TBD.
+Personal open source project. Repo: `github.com/Gogoro/marg.sh`.
 
 ## project layout
 
@@ -38,15 +38,13 @@ go build -o marg .
 
 Tests: `go test ./...` from the repo root.
 
-## the iniva brand
+## design philosophy
 
-This is an iniva tool, not a personal-labs tool. Polish to the level Odett is polished at: clean, restrained, designer-quality README and chrome.
-
-Clean and mean: one accent color, no emoji, no splash, every key has one job. Do **not** import the rizz aesthetic (cheek, vibes, confetti). Polish lives in the repo / README / install flow / landing page, not in the TUI chrome itself.
+Clean and restrained: one accent color, no emoji, no splash, every key has one job. The polish lives in the repo, README, and install flow — the TUI itself stays calm and out of the way. No cheek, no vibes, no confetti. The reader should feel like they're looking at the page, not at the editor.
 
 ## unique-selling-points.md — keep this updated
 
-Whenever a change goes in that gives marg a feature or behavior most other markdown / prose / TUI editors don't have, add a bullet to `unique-selling-points.md`. This is the marketing-narrative scratchpad — we use it to figure out what story to tell when this goes public.
+Whenever a change goes in that gives marg a feature or behavior most other markdown / prose / TUI editors don't have, add a bullet to `unique-selling-points.md`. This is the marketing-narrative scratchpad — we use it to figure out what story to tell.
 
 Rules of thumb for what goes in:
 
@@ -58,8 +56,8 @@ If you remove a feature, remove its bullet. The list should always reflect what 
 
 ## commit messages
 
-Short, lowercase, no conventional-commit prefix. Match the iniva style: `add max_width config`, `fix soft-wrap on empty line`, `wire up dd and yy`.
+Short, lowercase, no conventional-commit prefix. Examples: `add max_width config`, `fix soft-wrap on empty line`, `wire up dd and yy`.
 
 ## todos
 
-Make sure to remind me about the `todos.md` file. There we have big and small things we should attack.
+Remind me about the `todos.md` file. There we have big and small things we should attack.
