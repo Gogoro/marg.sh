@@ -10,7 +10,6 @@
 
 ## Ideas
 - [ ] Add AI help into the system. For like proof reading, hints on things I could adjust and so on. Augment my flow. Should be in the marg (!!!)
-- [ ] Plan this out as a project that is part open source, and part paid?
 
 
 TUI
