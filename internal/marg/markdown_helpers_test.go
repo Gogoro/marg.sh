@@ -70,6 +70,19 @@ func TestParseListLineCheckboxAlternateBullets(t *testing.T) {
 	}
 }
 
+func TestParseListLineCheckboxInProgress(t *testing.T) {
+	info, ok := parseListLine([]rune("- [/] half done"))
+	if !ok {
+		t.Fatal("expected list match")
+	}
+	if info.prefixRunes != 6 {
+		t.Errorf("prefixRunes = %d, want 6", info.prefixRunes)
+	}
+	if info.nextPrefix != "- [ ] " {
+		t.Errorf("nextPrefix = %q, want %q (always unchecked next)", info.nextPrefix, "- [ ] ")
+	}
+}
+
 func TestParseListLineNotACheckbox(t *testing.T) {
 	info, ok := parseListLine([]rune("- [foo] bar"))
 	if !ok {

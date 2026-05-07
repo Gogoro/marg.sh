@@ -59,10 +59,10 @@ func parseListLine(line []rune) (listLineInfo, bool) {
 	return listLineInfo{}, false
 }
 
-// isCheckboxAt reports whether `[ ]`, `[x]`, or `[X]` followed by a space
-// starts at position `start` in `line`. Used to extend a list item's prefix
-// so wrap continuation aligns under the todo content rather than under the
-// checkbox.
+// isCheckboxAt reports whether `[ ]`, `[x]`, `[X]`, or `[/]` followed by a
+// space starts at position `start` in `line`. `[/]` is the convention for an
+// in-progress task. Used to extend a list item's prefix so wrap continuation
+// aligns under the todo content rather than under the checkbox.
 func isCheckboxAt(line []rune, start int) bool {
 	if start+3 >= len(line) {
 		return false
@@ -71,7 +71,7 @@ func isCheckboxAt(line []rune, start int) bool {
 		return false
 	}
 	mark := line[start+1]
-	return mark == ' ' || mark == 'x' || mark == 'X'
+	return mark == ' ' || mark == 'x' || mark == 'X' || mark == '/'
 }
 
 // isTableRow reports whether a buffer line looks like a markdown table row —

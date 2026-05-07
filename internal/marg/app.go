@@ -87,6 +87,10 @@ type app struct {
 	// statusMessage is a transient line shown in the status bar (e.g. "saved").
 	statusMessage string
 
+	// alternateFile is the path of the previously-open file, swapped on every
+	// successful open. ctrl+6 / ctrl+^ jumps to it (vim's "alternate buffer").
+	alternateFile string
+
 	quitting bool
 }
 
@@ -187,6 +191,9 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			a.statusMessage = "open failed: " + err.Error()
 			return a, nil
+		}
+		if a.editor.filepath != "" && a.editor.filepath != string(m) {
+			a.alternateFile = a.editor.filepath
 		}
 		a.editor = ed
 		a.editor.maxWidth = a.cfg.MaxWidth
@@ -297,6 +304,12 @@ func (a *app) handleGlobalKey(m tea.KeyMsg) (bool, tea.Model, tea.Cmd) {
 		a.picker.resize(a.width, a.height)
 		a.picking = true
 		return true, *a, cmd
+	case "ctrl+6", "ctrl+^":
+		if a.alternateFile == "" {
+			a.statusMessage = "no alternate file"
+			return true, *a, nil
+		}
+		return true, *a, openFileCmd(a.alternateFile)
 	}
 	return false, *a, nil
 }

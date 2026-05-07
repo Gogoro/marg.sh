@@ -130,6 +130,7 @@ Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax hi
 |----------|------------------------------|
 | `ctrl+p` | fuzzy file picker            |
 | `ctrl+e` | toggle file tree             |
+| `ctrl+6` / `ctrl+^` | jump to alternate (previous) file |
 
 ### editor — normal mode
 
@@ -148,6 +149,7 @@ Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax hi
 | `I` / `A`      | insert at line start / end            |
 | `o` / `O`      | open new line below / above           |
 | `x`            | delete char under cursor              |
+| `r` *char*     | replace char under cursor with *char* |
 | `u` / `ctrl+r` | undo / redo                           |
 | `dd`           | cut (delete) current line             |
 | `yy` / `Y`     | yank (copy) current line              |
@@ -165,6 +167,7 @@ Move with motions to extend the selection. Then:
 |----------------|---------------------------------------|
 | `y`            | yank selection                        |
 | `d` / `x`      | cut selection                         |
+| `c`            | cut selection and enter insert mode   |
 | `p`            | replace selection with register       |
 | `*`            | wrap selection in `**bold**`          |
 | `_`            | wrap selection in `_italic_`          |
