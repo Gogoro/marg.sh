@@ -59,6 +59,7 @@ const (
 	promptNewFile
 	promptNewDir
 	promptDelete
+	promptRename
 )
 
 func newTree(root string) tree {
@@ -158,6 +159,13 @@ func (t tree) update(msg tea.KeyMsg) (tree, tea.Cmd, string) {
 		if len(nodes) > 0 {
 			n := nodes[t.cursor]
 			t.confirm = fmt.Sprintf("delete %s? (y/N)", n.name)
+		}
+	case "r":
+		if len(nodes) > 0 {
+			n := nodes[t.cursor]
+			t.prompt = "rename"
+			t.promptIn = n.name
+			t.promptCmd = promptRename
 		}
 	case "R":
 		t.refresh()
@@ -332,6 +340,30 @@ func (t tree) updatePrompt(msg tea.KeyMsg) (tree, tea.Cmd, string) {
 				t.refresh()
 				t.cursorToPath(path)
 			}
+		case promptRename:
+			nodes := t.visibleNodes()
+			if len(nodes) == 0 {
+				return t, nil, ""
+			}
+			old := nodes[t.cursor].path
+			if name == filepath.Base(old) {
+				return t, nil, ""
+			}
+			dest := filepath.Join(filepath.Dir(old), name)
+			if _, err := os.Stat(dest); err == nil {
+				t.flash = "destination exists: " + name
+				return t, nil, ""
+			}
+			if err := os.Rename(old, dest); err != nil {
+				t.flash = "rename failed: " + err.Error()
+				return t, nil, ""
+			}
+			if t.expanded[old] {
+				delete(t.expanded, old)
+				t.expanded[dest] = true
+			}
+			t.refresh()
+			t.cursorToPath(dest)
 		}
 	case "backspace":
 		if len(t.promptIn) > 0 {

@@ -653,8 +653,47 @@ func (e *editor) runCommand(cmd string) tea.Cmd {
 		e.runSubstitute(cmd[3:], 0, e.buf.lineCount()-1)
 		return nil
 	}
+	if strings.HasPrefix(cmd, "rename ") || cmd == "rename" {
+		e.runRename(strings.TrimSpace(strings.TrimPrefix(cmd, "rename")))
+		return nil
+	}
 	e.flash = "unknown: :" + cmd
 	return nil
+}
+
+// runRename renames the open file on disk and updates the buffer's path.
+// A bare name renames in the same directory; a name containing a separator
+// is treated as the full destination path. ".md" is appended if no extension.
+func (e *editor) runRename(arg string) {
+	if e.filepath == "" {
+		e.flash = "no file to rename"
+		return
+	}
+	if arg == "" {
+		e.flash = "usage: :rename <new-name>"
+		return
+	}
+	dest := arg
+	if !strings.ContainsRune(dest, filepath.Separator) {
+		dest = filepath.Join(filepath.Dir(e.filepath), dest)
+	}
+	if filepath.Ext(dest) == "" {
+		dest += ".md"
+	}
+	if dest == e.filepath {
+		e.flash = "same path — nothing to do"
+		return
+	}
+	if _, err := os.Stat(dest); err == nil {
+		e.flash = "destination exists: " + dest
+		return
+	}
+	if err := os.Rename(e.filepath, dest); err != nil {
+		e.flash = "rename failed: " + err.Error()
+		return
+	}
+	e.filepath = dest
+	e.flash = "renamed to " + filepath.Base(dest)
 }
 
 // runSubstitute handles :s/foo/bar/[g] and :%s/foo/bar/[g]. The argument
@@ -773,10 +812,14 @@ func (e *editor) moveRight() {
 func (e *editor) moveVisualDown() {
 	visuals := e.allVisualLines()
 	idx := e.cursorVisualIndex(visuals)
-	if idx+1 >= len(visuals) {
+	next := idx + 1
+	for next < len(visuals) && visuals[next].synthetic {
+		next++
+	}
+	if next >= len(visuals) {
 		return
 	}
-	target := visuals[idx+1]
+	target := visuals[next]
 	cur := visuals[idx]
 	offset := e.col - cur.startCol
 	if e.preferredCol > e.col {
@@ -797,10 +840,14 @@ func (e *editor) moveVisualDown() {
 func (e *editor) moveVisualUp() {
 	visuals := e.allVisualLines()
 	idx := e.cursorVisualIndex(visuals)
-	if idx <= 0 {
+	prev := idx - 1
+	for prev >= 0 && visuals[prev].synthetic {
+		prev--
+	}
+	if prev < 0 {
 		return
 	}
-	target := visuals[idx-1]
+	target := visuals[prev]
 	cur := visuals[idx]
 	offset := e.col - cur.startCol
 	if e.preferredCol > e.col {
@@ -836,6 +883,30 @@ func (e *editor) jumpVisualLines(n int) {
 	}
 	if target >= len(visuals) {
 		target = len(visuals) - 1
+	}
+	dir := 1
+	if n < 0 {
+		dir = -1
+	}
+	for target >= 0 && target < len(visuals) && visuals[target].synthetic {
+		target += dir
+	}
+	if target < 0 || target >= len(visuals) {
+		// walked off the end stepping past synthetic — bounce back the other way
+		dir = -dir
+		target = idx + n
+		if target < 0 {
+			target = 0
+		}
+		if target >= len(visuals) {
+			target = len(visuals) - 1
+		}
+		for target >= 0 && target < len(visuals) && visuals[target].synthetic {
+			target += dir
+		}
+	}
+	if target < 0 || target >= len(visuals) {
+		return
 	}
 
 	cur := visuals[idx]
@@ -1652,7 +1723,9 @@ func (e *editor) statusLeft() string {
 }
 
 func (e *editor) statusRight() string {
-	return fmt.Sprintf("%d:%d  %d words", e.row+1, e.col+1, e.buf.wordCount())
+	return fmt.Sprintf("%d:%d  ·  %d lines  ·  %d words  ·  %d chars",
+		e.row+1, e.col+1,
+		e.buf.lineCount(), e.buf.wordCount(), e.buf.charCount())
 }
 
 func min(a, b int) int {

@@ -141,7 +141,7 @@ Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax hi
 | `p` / `P`      | paste after / before cursor (or below/above for line-wise) |
 | `v` / `V`      | visual / visual-line selection mode   |
 | `/`            | search forward (then `n` / `N` to repeat) |
-| `:`            | command line (`:w`, `:q`, `:wq`, `:e`, `:e!`, `:zen`, `:Ex`, `:H1..:H6`, `:s/…`, `:%s/…`) |
+| `:`            | command line (`:w`, `:q`, `:wq`, `:e`, `:e!`, `:zen`, `:Ex`, `:H1..:H6`, `:s/…`, `:%s/…`, `:rename …`) |
 | `ctrl+s`       | save                                  |
 
 ### editor — visual mode (`v` / `V`)
@@ -175,6 +175,7 @@ Markdown list continuation: pressing Enter on a line that starts with `- `, `* `
 | `g` / `G`      | top / bottom                          |
 | `%`            | new file (creates `.md` if no ext)    |
 | `d`            | new directory                         |
+| `r`            | rename file or folder                 |
 | `D`            | delete (with confirmation)            |
 | `/`            | filter tree (substring match across paths) |
 | `R`            | refresh                               |

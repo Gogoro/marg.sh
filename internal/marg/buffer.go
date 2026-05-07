@@ -319,3 +319,11 @@ func (b *buffer) wordCount() int {
 	}
 	return n
 }
+
+func (b *buffer) charCount() int {
+	n := 0
+	for _, line := range b.lines {
+		n += len(line)
+	}
+	return n
+}
