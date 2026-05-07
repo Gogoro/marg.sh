@@ -118,7 +118,7 @@ func loadConfig() Config {
 	return cfg
 }
 
-// parseRootList accepts a TOML-style array literal (`["~", "/Users/ole/work"]`)
+// parseRootList accepts a TOML-style array literal (`["~", "/Users/me/notes"]`)
 // and returns each entry, stripped of quotes and with `~` expanded to the
 // user's home directory.
 func parseRootList(value string) []string {

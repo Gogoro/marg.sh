@@ -1,10 +1,23 @@
-# marg
+<h1 align="center">
+  <img src="assets/logo.png" alt="marg" width="420"/>
+</h1>
 
-A terminal markdown editor. Word-doc feel, vim keys, no forever-long lines.
+<p align="center">
+  <b>A terminal markdown editor.</b><br/>
+  <i>Word-doc feel, vim keys, no forever-long lines.</i>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-brightgreen?style=flat-square" alt="license: MIT"/></a>
+  <img src="https://img.shields.io/badge/go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="go 1.24+"/>
+  <img src="https://img.shields.io/badge/built%20with-bubble%20tea-8A2BE2?style=flat-square" alt="built with bubble tea"/>
+</p>
 
 <p align="center">
   <img src="assets/screenshots/editor-prose.png" alt="marg editing a journal entry with soft-wrapped prose" width="900"/>
 </p>
+
+---
 
 ## why I built this
 
@@ -79,7 +92,7 @@ Super mode is the fastest way to jump to any note across all your projects — `
 
 ### fuzzy file picker (`ctrl+p`)
 
-`ctrl+p` from anywhere opens a centered overlay. Type to filter, up/down to navigate, enter to open, esc to cancel. Subsequence match (so `oroad` finds `odett/roadmap.md`).
+`ctrl+p` from anywhere opens a centered overlay. Type to filter, up/down to navigate, enter to open, esc to cancel. Subsequence match (so `sroad` finds `sidekick/roadmap.md`).
 
 <p align="center">
   <img src="assets/screenshots/fuzzy-picker.png" alt="marg fuzzy file picker filtering on the query 'launch'" width="900"/>
@@ -288,10 +301,36 @@ vhs demo/tape/wrap.tape     # max_width comparison
 
 PNGs land in `assets/screenshots/`.
 
+## what's not here (yet)
+
+- No LSP, no completion, no linting. marg is for reading and writing prose, not for code.
+- No split panes, no tabs. One file, one window, one job.
+- No plugin system. Every feature is built in or it isn't.
+- No mouse support. Keyboard only.
+- No project-wide find / replace yet. Buffer-local `:s/…` and `:%s/…` only.
+
+If something on this list would genuinely make marg better for prose, open an issue.
+
 ## contributing
 
 Issues and pull requests welcome. This is a small, opinionated tool — I'd rather keep the surface area narrow than grow into a full IDE — but bug reports, polish, new tree-sitter languages, and small ergonomic improvements are all fair game. Open an issue first if you're planning a larger change so we can talk through fit.
 
+## credits
+
+Built with:
+
+- [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss) by [Charm](https://charm.sh/) — the TUI runtime and styling layer.
+- [tree-sitter](https://github.com/tree-sitter/tree-sitter) — grammar-aware highlighting inside fenced code blocks.
+- [Chroma](https://github.com/alecthomas/chroma) — fallback syntax highlighting for everything tree-sitter doesn't ship with.
+- [fsnotify](https://github.com/fsnotify/fsnotify) — filesystem watching for auto-reload on external edits.
+- [VHS](https://github.com/charmbracelet/vhs) — terminal recording for the screenshots.
+
 ## license
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  <i>read like a book, edit like vim.</i>
+</p>

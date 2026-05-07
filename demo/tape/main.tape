@@ -24,7 +24,7 @@ Sleep 200ms
 Show
 
 # launch marg on the vault — opens the file tree (folders collapsed)
-Type "marg"
+Type "marg ."
 Enter
 Sleep 800ms
 

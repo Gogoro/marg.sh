@@ -1,4 +1,4 @@
-module marg
+module github.com/Gogoro/marg.sh
 
 go 1.24.0
 

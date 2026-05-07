@@ -25,7 +25,7 @@ Enter
 Sleep 200ms
 Show
 
-Type "marg projects/odett/snippets.md"
+Type "marg projects/sidekick/snippets.md"
 Enter
 Sleep 800ms
 Screenshot "assets/screenshots/code-highlight.png"

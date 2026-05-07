@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"marg/internal/marg"
+	"github.com/Gogoro/marg.sh/internal/marg"
 )
 
 func main() {

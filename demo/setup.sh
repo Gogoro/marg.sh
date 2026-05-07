@@ -8,12 +8,12 @@ set -euo pipefail
 TARGET="${1:-/tmp/marg-demo}"
 
 rm -rf "$TARGET"
-mkdir -p "$TARGET"/{journal,notes,projects/odett,projects/iniva-website}
+mkdir -p "$TARGET"/{journal,notes,projects/sidekick,projects/personal-site}
 
 cat > "$TARGET/README.md" <<'EOF'
 # notes
 
-A small slice of my second brain. Journal lives in `journal/`, loose notes
+A small slice of a second brain. Journal lives in `journal/`, loose notes
 in `notes/`, ongoing projects in `projects/`.
 EOF
 
@@ -29,7 +29,7 @@ happen.
 Later I sat down to think about what I want the rest of this quarter to look
 like. Three things kept coming back:
 
-- ship Odett's alpha by the end of the month, even if the polish isn't perfect
+- ship the alpha by the end of the month, even if the polish isn't perfect
 - close out the long tail of half-finished side notes — they weigh on me
 - find one full afternoon a week with no meetings, no tickets, just a long
   walk and a notebook
@@ -37,24 +37,24 @@ like. Three things kept coming back:
 > "Slow is smooth, smooth is fast." — heard this somewhere, can't remember
 > where, but it's been rattling around all week.
 
-Tomorrow: review the auth migration plan with the team. Make sure we're not
-shipping anything that legal hasn't signed off on.
+Tomorrow: review the migration plan with the team. Make sure the rollout
+sequence actually matches what's in the runbook.
 EOF
 
 cat > "$TARGET/journal/2026-04-15.md" <<'EOF'
 # Wednesday, April 15
 
-Big day. The dictation pipeline finally hit sub-second latency end-to-end on
-a real M-series chip without the fan kicking on. Felt like crossing a
-threshold — until today the demo always had a "wait, let me start over"
-moment that pulled people out of the magic. Now it just *works*.
+Big day. The streaming pipeline finally hit sub-second latency end-to-end on
+a real machine without the fan kicking on. Felt like crossing a threshold —
+until today the demo always had a "wait, let me start over" moment that
+pulled people out of the magic. Now it just *works*.
 
 ## what got us here
 
-1. Switched the streaming chunker to a smaller window
+1. Switched the chunker to a smaller window
 2. Cached the language detection result for the session
 3. Stopped re-tokenizing the whole transcript on every partial result
-4. Moved the WAV decode off the main thread
+4. Moved the decode off the main thread
 
 The third one was the surprise. We thought it was a model latency problem
 all the way down, and it turned out half the budget was being spent in
@@ -63,7 +63,7 @@ JavaScript string manipulation.
 ## tomorrow
 
 - record a fresh demo video before anyone notices it's broken again
-- email Erik about the Series A intro
+- write up the perf notes in the team channel
 - groceries: olive oil, lemons, parsley, the good salt
 EOF
 
@@ -92,8 +92,9 @@ A loose pile. Most of these will never become anything. That's fine.
 
 ## product
 
-- Odett needs a "speak the punctuation" mode. Half my recordings end up with
-  no commas because I dictate naturally and forget that the model can hear me.
+- The dictation tool needs a "speak the punctuation" mode. Half my recordings
+  end up with no commas because I dictate naturally and forget the model can
+  hear me.
 EOF
 
 cat > "$TARGET/notes/reading-list.md" <<'EOF'
@@ -137,7 +138,7 @@ A scratchpad. Don't expect coherence.
   feared. The dread is the bug. Fixing it takes ten minutes.
 EOF
 
-cat > "$TARGET/projects/odett/snippets.md" <<'EOF'
+cat > "$TARGET/projects/sidekick/snippets.md" <<'EOF'
 # Useful snippets
 
 ## Go: simple HTTP server
@@ -185,24 +186,24 @@ LIMIT 100;
 ```
 EOF
 
-cat > "$TARGET/projects/odett/launch-checklist.md" <<'EOF'
-# Odett alpha launch checklist
+cat > "$TARGET/projects/sidekick/launch-checklist.md" <<'EOF'
+# Sidekick alpha launch checklist
 
 > Working doc. Updated daily.
 
 ## must-have
 
-- [x] streaming latency under 1s on M-series
+- [x] streaming latency under 1s on a laptop
 - [x] magic link auth flow on web + desktop
-- [ ] Stripe integration tested end-to-end with a real card
-- [ ] crash reporting via Sentry on both web and native
-- [ ] privacy policy reviewed by legal
+- [ ] payments tested end-to-end with a real card
+- [ ] crash reporting wired up on web and native
+- [ ] privacy policy reviewed
 
 ## should-have
 
 - [ ] onboarding tour for first-time users
 - [ ] in-app feedback button
-- [ ] dictation hotkey customizable
+- [ ] hotkeys customizable
 
 ## nice-to-have
 
@@ -210,8 +211,8 @@ cat > "$TARGET/projects/odett/launch-checklist.md" <<'EOF'
 - [ ] referral codes
 EOF
 
-cat > "$TARGET/projects/odett/roadmap.md" <<'EOF'
-# Odett roadmap
+cat > "$TARGET/projects/sidekick/roadmap.md" <<'EOF'
+# Sidekick roadmap
 
 ## Q2 2026
 
@@ -228,33 +229,33 @@ cat > "$TARGET/projects/odett/roadmap.md" <<'EOF'
 ## Q4 2026
 
 - general availability
-- iOS app
+- mobile app
 - API for third-party integrations
 EOF
 
-cat > "$TARGET/projects/iniva-website/copy-draft.md" <<'EOF'
-# iniva.no — homepage copy
+cat > "$TARGET/projects/personal-site/copy-draft.md" <<'EOF'
+# personal site — homepage copy
 
 ## hero
 
 **Tools that get out of your way.**
 
-We build small, focused software for people who care about how their work
-*feels*. Spoken-word transcription that doesn't lag. Markdown editing that
-doesn't fight you. Code review that ships you faster.
+Small, focused software for people who care about how their work *feels*.
+Dictation that doesn't lag. Markdown editing that doesn't fight you. Code
+review that ships you faster.
 
 ## about
 
-iniva is a small Norwegian software studio. We make tools we use ourselves,
-every day. If something we ship works for you the same way, that's the win.
+A one-person studio. The tools shipped here are the tools used here, every
+day. If something works for you the same way, that's the win.
 
-## products
+## projects
 
-### Odett
+### Sidekick
 Speech to text that feels native. *In private alpha.*
 
 ### marg
-A markdown editor for the terminal. *Open source, coming soon.*
+A markdown editor for the terminal. *Open source.*
 EOF
 
 echo "marg demo vault built at $TARGET"
