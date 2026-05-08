@@ -1,6 +1,7 @@
 package marg
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -102,6 +103,19 @@ type editor struct {
 	// transient one-shot status (e.g. "saved").
 	flash    string
 	flashGen int
+
+	// AI proofreading state. suggestions are transient — never persisted —
+	// and dropped automatically when the line they anchor to no longer
+	// contains the original text. proofRunning is true while a `:proof`
+	// request is in flight, so we don't queue another one on top.
+	suggestions  []suggestion
+	proofRunning bool
+
+	// ai holds the model + auth config copied from the global Config when
+	// the editor was opened. The editor reads from it on `:proof` so users
+	// can swap models or rotate keys by editing config.toml without code
+	// changes.
+	ai AIConfig
 }
 
 // flashTickMsg is delivered by a tea.Tick a couple of seconds after a flash
@@ -244,6 +258,22 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 				e.recordChange()
 			}
 			return e, nil
+		case pending == "]" && key == "s":
+			e.jumpToNextSuggestion()
+			e.clampCursor()
+			e.scrollToCursor()
+			return e, nil
+		case pending == "[" && key == "s":
+			e.jumpToPrevSuggestion()
+			e.clampCursor()
+			e.scrollToCursor()
+			return e, nil
+		case pending == "g" && key == "A":
+			e.acceptSuggestionAtCursor()
+			return e, nil
+		case pending == "g" && key == "X":
+			e.rejectSuggestionAtCursor()
+			return e, nil
 		}
 		// pending didn't match — fall through and handle key normally.
 	}
@@ -274,6 +304,10 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.preferredCol = e.col
 	case "g":
 		e.pendingKey = "g"
+	case "]":
+		e.pendingKey = "]"
+	case "[":
+		e.pendingKey = "["
 	case "G":
 		e.row = e.buf.lineCount() - 1
 		e.col = 0
@@ -689,6 +723,14 @@ func (e *editor) runCommand(cmd string) tea.Cmd {
 		e.runRename(strings.TrimSpace(strings.TrimPrefix(cmd, "rename")))
 		return nil
 	}
+	if cmd == "proof" {
+		return e.runProofread()
+	}
+	if cmd == "proof!" {
+		e.suggestions = nil
+		e.flash = "suggestions cleared"
+		return nil
+	}
 	e.flash = "unknown: :" + cmd
 	return nil
 }
@@ -793,6 +835,167 @@ func (e *editor) reloadFromDisk(force bool) {
 	e.recordChange()
 	e.flash = "reloaded"
 }
+
+// --- proofread ---
+
+// runProofread fires off an async proofreading pass over the whole document
+// and returns a tea.Cmd that delivers a proofResultMsg when the API responds.
+// While a request is in flight, further `:proof` calls are no-ops so we
+// don't pile up redundant work.
+func (e *editor) runProofread() tea.Cmd {
+	if e.proofRunning {
+		e.flash = "proofread already running"
+		return nil
+	}
+	e.proofRunning = true
+	// proofRunning drives the persistent status-bar indicator; no flash
+	// needed (and a flash would auto-clear after 2s, which would mislead
+	// the user since the API call typically takes 5–30s).
+	doc := e.buf.toString()
+	model := e.ai.FastModel
+	apiKey := e.ai.APIKey
+	return func() tea.Msg {
+		raws, err := requestProofread(context.Background(), doc, model, apiKey)
+		return proofResultMsg{suggestions: raws, err: err}
+	}
+}
+
+// onProofResult ingests the model's response, anchors each suggestion onto
+// the current buffer, and updates the status flash with the count or error.
+func (e editor) onProofResult(m proofResultMsg) editor {
+	e.proofRunning = false
+	if m.err != nil {
+		e.flash = "proof failed: " + m.err.Error()
+		return e
+	}
+	e.suggestions = anchorSuggestions(e.buf, m.suggestions)
+	if len(e.suggestions) == 0 {
+		e.flash = "no suggestions"
+	} else {
+		e.flash = fmt.Sprintf("%d suggestion(s) — ]s next, gA accept, gX reject", len(e.suggestions))
+	}
+	return e
+}
+
+// suggestionAtCursor returns a pointer to the suggestion the cursor is
+// currently inside, or nil. The cursor counts as "inside" anywhere in the
+// half-open span [startCol, endCol).
+func (e *editor) suggestionAtCursor() *suggestion {
+	for i := range e.suggestions {
+		s := &e.suggestions[i]
+		if s.row == e.row && e.col >= s.startCol && e.col < s.endCol {
+			return s
+		}
+	}
+	return nil
+}
+
+// jumpToNextSuggestion moves the cursor to the start of the next suggestion
+// after the current cursor position. Wraps around to the top.
+func (e *editor) jumpToNextSuggestion() {
+	if len(e.suggestions) == 0 {
+		e.flash = "no suggestions"
+		return
+	}
+	for _, s := range e.suggestions {
+		if s.row > e.row || (s.row == e.row && s.startCol > e.col) {
+			e.row, e.col = s.row, s.startCol
+			e.preferredCol = e.col
+			return
+		}
+	}
+	first := e.suggestions[0]
+	e.row, e.col = first.row, first.startCol
+	e.preferredCol = e.col
+	e.flash = "wrapped to first suggestion"
+}
+
+// jumpToPrevSuggestion is the mirror of jumpToNextSuggestion.
+func (e *editor) jumpToPrevSuggestion() {
+	if len(e.suggestions) == 0 {
+		e.flash = "no suggestions"
+		return
+	}
+	for i := len(e.suggestions) - 1; i >= 0; i-- {
+		s := e.suggestions[i]
+		if s.row < e.row || (s.row == e.row && s.startCol < e.col) {
+			e.row, e.col = s.row, s.startCol
+			e.preferredCol = e.col
+			return
+		}
+	}
+	last := e.suggestions[len(e.suggestions)-1]
+	e.row, e.col = last.row, last.startCol
+	e.preferredCol = e.col
+	e.flash = "wrapped to last suggestion"
+}
+
+// acceptSuggestionAtCursor replaces the cursor's suggestion with the model's
+// proposed text in the buffer, drops the suggestion, and re-anchors the
+// remaining suggestions on the same line in case offsets shifted.
+func (e *editor) acceptSuggestionAtCursor() {
+	s := e.suggestionAtCursor()
+	if s == nil {
+		e.flash = "no suggestion at cursor"
+		return
+	}
+	if s.replacement == "" {
+		e.flash = "advisory only — no replacement to accept"
+		return
+	}
+	row, startCol, endCol := s.row, s.startCol, s.endCol
+	replacement := s.replacement
+
+	e.buf.deleteRange(row, startCol, row, endCol-1)
+	e.row, e.col = e.buf.insertText(row, startCol, replacement)
+	e.dirty = true
+	e.recordChange()
+	e.removeSuggestionsOnRow(row)
+	e.reanchorRow(row)
+	e.flash = "accepted"
+	e.clampCursor()
+	e.scrollToCursor()
+}
+
+// rejectSuggestionAtCursor drops the current suggestion without changing
+// the buffer.
+func (e *editor) rejectSuggestionAtCursor() {
+	s := e.suggestionAtCursor()
+	if s == nil {
+		e.flash = "no suggestion at cursor"
+		return
+	}
+	out := e.suggestions[:0]
+	for _, x := range e.suggestions {
+		if x.row == s.row && x.startCol == s.startCol && x.endCol == s.endCol {
+			continue
+		}
+		out = append(out, x)
+	}
+	e.suggestions = out
+	e.flash = "rejected"
+}
+
+// removeSuggestionsOnRow drops every suggestion anchored to a given row.
+// Used after an accept on that row, since the offsets of any other
+// suggestions on the same line may have shifted.
+func (e *editor) removeSuggestionsOnRow(row int) {
+	out := e.suggestions[:0]
+	for _, s := range e.suggestions {
+		if s.row == row {
+			continue
+		}
+		out = append(out, s)
+	}
+	e.suggestions = out
+}
+
+// reanchorRow re-resolves any raw-style suggestions on a given row by
+// searching the line for their `original` text. The MVP doesn't keep raw
+// suggestions around after anchoring, so this is currently a no-op
+// placeholder — accepts always drop the row's other suggestions in
+// removeSuggestionsOnRow above. Kept as a hook for Phase 2.
+func (e *editor) reanchorRow(row int) {}
 
 // --- save ---
 
@@ -1524,13 +1727,23 @@ func (e *editor) view() string {
 	if end > len(visuals) {
 		end = len(visuals)
 	}
+	boxRows := e.renderProofBox(visuals, e.height)
+	pickSidebar := func(row int) string {
+		if boxRows == nil {
+			return ""
+		}
+		if row < 0 || row >= len(boxRows) {
+			return ""
+		}
+		return boxRows[row]
+	}
 	for i := e.scroll; i < end; i++ {
 		v := visuals[i]
 		isCursorLine := i == cursorIdx
-		rows = append(rows, e.renderVisualLine(v, isCursorLine, codeSpans, frontmatterEnd))
+		rows = append(rows, e.renderVisualLine(v, isCursorLine, codeSpans, frontmatterEnd, pickSidebar(i-e.scroll)))
 	}
 	for len(rows) < e.height {
-		rows = append(rows, e.renderEmptyRow(false))
+		rows = append(rows, e.renderEmptyRow(false, pickSidebar(len(rows))))
 	}
 	return strings.Join(rows, "\n")
 }
@@ -1554,9 +1767,9 @@ func (e *editor) scanFrontmatter() int {
 	return 0
 }
 
-func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSpans, frontmatterEnd int) string {
+func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSpans, frontmatterEnd int, sidebar string) string {
 	if v.synthetic {
-		return e.renderEmptyRow(false)
+		return e.renderEmptyRow(false, sidebar)
 	}
 
 	line := e.buf.line(v.row)
@@ -1576,6 +1789,7 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 	} else if !inCode {
 		inlines = inlineRanges(line)
 	}
+	hiddenCols := e.collapsedSyntaxCols(v.row, line, inFrontmatter || inCode)
 	searchMatches := findMatchesInLine(line, e.lastSearch)
 
 	rowBg, paintRow := e.rowBackground(hasCursor)
@@ -1604,8 +1818,16 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 	}
 
 	segLen := v.endCol - v.startCol
+	hiddenInSeg := 0
 	for i := 0; i < segLen; i++ {
 		col := v.startCol + i
+		// Collapsed-link chars: skip the `[`, `]`, and `(url)` so the link
+		// reads as plain styled text. Cursor never lands on these because a
+		// link containing the cursor is force-expanded above.
+		if hiddenCols[col] {
+			hiddenInSeg++
+			continue
+		}
 		var s lipgloss.Style
 		if inCode && len(codeRowSpans) > 0 {
 			s = styleAtCol(codeRowSpans, col, base)
@@ -1616,6 +1838,16 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 					s = ir.style
 					break
 				}
+			}
+		}
+		// Proofread suggestions: a subtle underline under the affected span.
+		// Layered after inline markdown styling so it composes with bold /
+		// italic / code colors rather than replacing them. Selection, search
+		// match, and cursor still override below.
+		for _, sg := range e.suggestions {
+			if sg.row == v.row && col >= sg.startCol && col < sg.endCol {
+				s = s.Underline(true)
+				break
 			}
 		}
 		if paintRow {
@@ -1638,7 +1870,7 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 	}
 	flush()
 
-	contentW := segLen
+	contentW := segLen - hiddenInSeg
 
 	if hasCursor && cursorRel == segLen {
 		b.WriteString(cursorStyle.Render(" "))
@@ -1667,15 +1899,147 @@ func (e *editor) renderVisualLine(v visualLine, hasCursor bool, code codeBlockSp
 		prefixSpaces = lipgloss.NewStyle().Background(rowBg).Render(prefixSpaces)
 	}
 
+	filled := e.leftMargin() + v.hangIndent + contentW
+	sidebarW := lipgloss.Width(sidebar)
+	// Box anchors at a fixed offset past the prose's wrap edge — not at
+	// the far right of the terminal — so on a wide terminal the box sits
+	// snug next to the text instead of floating in the void.
+	const sidebarGap = 4
+	sidebarLeft := e.leftMargin() + e.wrapWidth() + sidebarGap
+	innerGap := sidebarLeft - filled
+	if innerGap < 0 {
+		innerGap = 0
+	}
+	trailingFill := e.width - sidebarLeft - sidebarW
+	if trailingFill < 0 {
+		trailingFill = 0
+	}
+	gap := e.width - filled - sidebarW
+	if gap < 0 {
+		gap = 0
+	}
+
 	tail := ""
-	if paintRow {
-		filled := e.leftMargin() + v.hangIndent + contentW
-		if e.width > filled {
-			tail = lipgloss.NewStyle().Background(rowBg).Render(strings.Repeat(" ", e.width-filled))
+	if sidebar != "" {
+		// Box mode: bg-paint the gap between prose and sidebar (so the
+		// cursor-line highlight extends right up to the box), then append
+		// the sidebar row, then bg-pad the trailing region out to the
+		// terminal edge so the row reads as a continuous strip.
+		inner := strings.Repeat(" ", innerGap)
+		trailing := strings.Repeat(" ", trailingFill)
+		if paintRow {
+			bg := lipgloss.NewStyle().Background(rowBg)
+			inner = bg.Render(inner)
+			trailing = bg.Render(trailing)
+		}
+		tail = inner + sidebar + trailing
+	} else {
+		// No box (terminal too narrow, no suggestions): fall back to the
+		// inline right-margin note for whichever suggestion starts here.
+		if !inCode {
+			if note := e.suggestionNoteForVisualLine(v); note != "" {
+				const leadGap = 2
+				noteRunes := []rune(note)
+				if avail := gap - leadGap; avail > 4 {
+					if len(noteRunes) > avail {
+						noteRunes = noteRunes[:avail]
+					}
+					noteStr := string(noteRunes)
+					lead := strings.Repeat(" ", leadGap)
+					trail := strings.Repeat(" ", avail-len(noteRunes))
+					noteStyle := lipgloss.NewStyle().Foreground(colorMuted)
+					if paintRow {
+						bg := lipgloss.NewStyle().Background(rowBg)
+						tail = bg.Render(lead) + noteStyle.Background(rowBg).Render(noteStr) + bg.Render(trail)
+					} else {
+						tail = lead + noteStyle.Render(noteStr)
+					}
+				}
+			}
+		}
+		if tail == "" && paintRow && gap > 0 {
+			tail = lipgloss.NewStyle().Background(rowBg).Render(strings.Repeat(" ", gap))
 		}
 	}
 
 	return prefixSpaces + b.String() + tail
+}
+
+// collapsedSyntaxCols returns the set of rune-indexed cols on `line` that
+// the renderer should skip in reading mode — link brackets + URL, plus
+// inline markers like `**`, `*`, `_`, `~~`, `` ` ``. The styled run still
+// renders, just without its surrounding syntax. A span is left fully
+// expanded (no skipping) when:
+//   - we're in insert mode (editing — show the raw markdown)
+//   - the cursor is on this row and inside the span
+//   - this is a frontmatter or code-block line (no inline rendering applies)
+func (e *editor) collapsedSyntaxCols(row int, line []rune, skipAll bool) map[int]bool {
+	if skipAll {
+		return nil
+	}
+	out := make(map[int]bool)
+	if e.mode != modeInsert {
+		for _, m := range inlineMarkerSpans(line) {
+			if e.row == row && e.col >= m.start && e.col < m.end {
+				continue
+			}
+			for c := m.start; c < m.start+m.leadLen; c++ {
+				out[c] = true
+			}
+			for c := m.end - m.tailLen; c < m.end; c++ {
+				out[c] = true
+			}
+		}
+	}
+	for _, lk := range linkSpans(line) {
+		expanded := e.mode == modeInsert
+		if !expanded && e.row == row && e.col >= lk.start && e.col < lk.end {
+			expanded = true
+		}
+		if expanded {
+			continue
+		}
+		for c := lk.start; c < lk.textStart; c++ {
+			out[c] = true
+		}
+		for c := lk.textEnd; c < lk.end; c++ {
+			out[c] = true
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// suggestionNoteForVisualLine picks the suggestion to annotate at the right
+// margin of one visual line, if any. A suggestion is shown on the visual
+// line where its span starts; long phrases that wrap don't double-annotate.
+// `→ replacement` for replacements, `· reason` for advisory notes.
+func (e *editor) suggestionNoteForVisualLine(v visualLine) string {
+	if v.synthetic {
+		return ""
+	}
+	for _, sg := range e.suggestions {
+		if sg.row != v.row {
+			continue
+		}
+		// Annotate on the wrap segment that contains the span's start.
+		// Empty-line suggestions (rare) anchor at startCol=0 endCol=0.
+		if sg.startCol < v.startCol {
+			continue
+		}
+		if sg.startCol >= v.endCol && !(v.startCol == 0 && v.endCol == 0) {
+			continue
+		}
+		if sg.replacement != "" {
+			return "→ " + sg.replacement
+		}
+		if sg.reason != "" {
+			return "· " + sg.reason
+		}
+	}
+	return ""
 }
 
 // rowBackground returns the background colour to paint behind the entire
@@ -1693,8 +2057,32 @@ func (e *editor) rowBackground(hasCursor bool) (lipgloss.Color, bool) {
 
 // renderEmptyRow draws a blank visual line — used for synthetic spacing
 // (above headings) and for trailing rows that pad the editor area.
-func (e *editor) renderEmptyRow(hasCursor bool) string {
+// `sidebar` is the proof-box column for this row; an empty string means
+// no box on this row. Sidebar position matches renderVisualLine: fixed
+// offset past the prose's wrap edge, not at the terminal's right edge.
+func (e *editor) renderEmptyRow(hasCursor bool, sidebar string) string {
 	rowBg, paint := e.rowBackground(hasCursor)
+	sidebarW := lipgloss.Width(sidebar)
+	const sidebarGap = 4
+	sidebarLeft := e.leftMargin() + e.wrapWidth() + sidebarGap
+	if sidebar != "" {
+		leadW := sidebarLeft
+		if leadW < 0 {
+			leadW = 0
+		}
+		trailW := e.width - sidebarLeft - sidebarW
+		if trailW < 0 {
+			trailW = 0
+		}
+		lead := strings.Repeat(" ", leadW)
+		trail := strings.Repeat(" ", trailW)
+		if paint {
+			bg := lipgloss.NewStyle().Background(rowBg)
+			lead = bg.Render(lead)
+			trail = bg.Render(trail)
+		}
+		return lead + sidebar + trail
+	}
 	if !paint {
 		return ""
 	}
@@ -1716,14 +2104,34 @@ func (e *editor) statusBar(width int, transient string) string {
 	if e.mode == modeSearch {
 		return styleStatusBar.Render("/" + e.searchInput + "_")
 	}
+	// Persistent proofread indicator — wins over the regular flash slot
+	// because the API call can take 5-30s and the user needs to know it's
+	// still running (a 2-second auto-clearing flash would lie to them).
+	if e.proofRunning {
+		return styleStatusBar.Render(lipgloss.NewStyle().Foreground(colorAccent).Render("proofreading…"))
+	}
 	if e.flash != "" {
 		return styleStatusBar.Render(e.flash)
+	}
+	if s := e.suggestionAtCursor(); s != nil {
+		return styleStatusBar.Render(formatSuggestionReveal(s))
 	}
 	if transient != "" {
 		return styleStatusBar.Render(transient)
 	}
 
 	return styleStatusBar.Render(left + strings.Repeat(" ", gap) + right)
+}
+
+// formatSuggestionReveal builds the status-line preview of one suggestion.
+// The margin annotation already shows `→ replacement` on the same row, so
+// the status bar focuses on the reason + the keys you act on it with.
+func formatSuggestionReveal(s *suggestion) string {
+	reason := s.reason
+	if reason == "" {
+		reason = "suggestion"
+	}
+	return fmt.Sprintf("%s  ·  gA accept  gX reject", reason)
 }
 
 func (e *editor) statusLeft() string {

@@ -132,6 +132,7 @@ func initialModel(target startTarget, cfg Config) (app, error) {
 	a.editor.maxWidth = cfg.MaxWidth
 	a.editor.codeMaxWidth = cfg.CodeMaxWidth
 	a.editor.centerAbove = cfg.CenterAbove
+	a.editor.ai = cfg.AI
 	a.picker = newPicker()
 	if target.kind == targetSuper {
 		a.superMode = true
@@ -199,6 +200,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.editor.maxWidth = a.cfg.MaxWidth
 		a.editor.codeMaxWidth = a.cfg.CodeMaxWidth
 		a.editor.centerAbove = a.cfg.CenterAbove
+		a.editor.ai = a.cfg.AI
 		a.editor.resize(a.width, a.editorContentHeight())
 		a.view = viewEditor
 		a.picking = false
@@ -222,6 +224,10 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case zenToggleMsg:
 		a.zenMode = !a.zenMode
 		a.editor.resize(a.width, a.editorContentHeight())
+		return a, nil
+
+	case proofResultMsg:
+		a.editor = a.editor.onProofResult(m)
 		return a, nil
 
 	case quitMsg:

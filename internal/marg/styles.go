@@ -9,6 +9,7 @@ import "github.com/charmbracelet/lipgloss"
 var (
 	colorBg          lipgloss.Color
 	colorFg          lipgloss.Color
+	colorBoldFg      lipgloss.Color
 	colorMuted       lipgloss.Color
 	colorDim         lipgloss.Color
 	colorAccent      lipgloss.Color
@@ -34,6 +35,7 @@ var (
 	styleHeadings [6]lipgloss.Style
 	styleBold     lipgloss.Style
 	styleItalic  lipgloss.Style
+	styleStrike  lipgloss.Style
 	styleCode    lipgloss.Style
 	styleLink    lipgloss.Style
 	styleQuote   lipgloss.Style
@@ -59,6 +61,10 @@ func rebuildStyles() {
 	colorBg = lipgloss.Color(active.bg)
 	colorFg = lipgloss.Color(active.fg)
 	colorText = colorFg
+	colorBoldFg = lipgloss.Color(active.boldFg)
+	if active.boldFg == "" {
+		colorBoldFg = colorFg
+	}
 	colorMuted = lipgloss.Color(active.muted)
 	colorDim = lipgloss.Color(active.dim)
 	colorAccent = lipgloss.Color(active.accent)
@@ -94,8 +100,9 @@ func rebuildStyles() {
 	for i, c := range colorHeadings {
 		styleHeadings[i] = lipgloss.NewStyle().Foreground(c).Bold(true)
 	}
-	styleBold = lipgloss.NewStyle().Foreground(colorFg).Bold(true)
+	styleBold = lipgloss.NewStyle().Foreground(colorBoldFg).Bold(true)
 	styleItalic = lipgloss.NewStyle().Foreground(colorFg).Italic(true)
+	styleStrike = lipgloss.NewStyle().Foreground(colorMuted).Strikethrough(true)
 	styleCode = lipgloss.NewStyle().Foreground(colorCode)
 	styleLink = lipgloss.NewStyle().Foreground(colorLink).Underline(true)
 	styleQuote = lipgloss.NewStyle().Foreground(colorQuote).Italic(true)

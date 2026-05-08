@@ -53,10 +53,41 @@ type Config struct {
 	// even when default rules would skip them — typically dot-prefixed dirs
 	// like `.claude` or `.obsidian` that contain notes worth opening.
 	IncludeDirs []string
+
+	// AI holds settings for the AI-assisted features (proofread, future
+	// rewrite/summarize). Populated from the `[ai]` section of the config.
+	AI AIConfig
+}
+
+// AIConfig is the model + auth settings for AI features. Two role-based
+// model slots — fast for inline mechanical work (proofread), smart for
+// substantive passes (future :proof %, paragraph rewrite). Each feature
+// picks one slot, so adding new features doesn't bloat the config.
+type AIConfig struct {
+	// APIKey for api.anthropic.com. Empty falls back to the
+	// ANTHROPIC_API_KEY environment variable. If neither is set, AI
+	// features are off and `:proof` flashes a hint.
+	APIKey string
+
+	// FastModel is used for inline, latency-sensitive work — current
+	// `:proof` runs against this slot. Defaults to claude-haiku-4-5.
+	FastModel string
+
+	// SmartModel is used for substantive passes that need more reasoning
+	// — future `:proof %` paragraph-level rewrites. Defaults to
+	// claude-sonnet-4-6.
+	SmartModel string
+}
+
+func defaultAIConfig() AIConfig {
+	return AIConfig{
+		FastModel:  "claude-haiku-4-5",
+		SmartModel: "claude-sonnet-4-6",
+	}
 }
 
 func defaultConfig() Config {
-	cfg := Config{MaxWidth: 0, CodeTheme: "catppuccin-mocha", Theme: "dark"}
+	cfg := Config{MaxWidth: 0, CodeTheme: "catppuccin-mocha", Theme: "dark", AI: defaultAIConfig()}
 	if home, err := os.UserHomeDir(); err == nil {
 		cfg.SuperRoots = []string{home}
 	}
@@ -73,9 +104,14 @@ func loadConfig() Config {
 	if err != nil {
 		return cfg
 	}
+	section := ""
 	for _, raw := range strings.Split(string(data), "\n") {
 		line := strings.TrimSpace(raw)
 		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			section = strings.TrimSpace(line[1 : len(line)-1])
 			continue
 		}
 		eq := strings.IndexByte(line, '=')
@@ -84,38 +120,62 @@ func loadConfig() Config {
 		}
 		key := strings.TrimSpace(line[:eq])
 		value := strings.Trim(strings.TrimSpace(line[eq+1:]), `"'`)
-		switch key {
-		case "max_width":
-			if n, err := strconv.Atoi(value); err == nil && n > 0 {
-				cfg.MaxWidth = n
-			}
-		case "code_max_width":
-			if n, err := strconv.Atoi(value); err == nil && n >= 0 {
-				cfg.CodeMaxWidth = n
-			}
-		case "center_above":
-			if n, err := strconv.Atoi(value); err == nil && n >= 0 {
-				cfg.CenterAbove = n
-			}
-		case "code_theme":
-			if value != "" {
-				cfg.CodeTheme = value
-			}
-		case "theme":
-			if value != "" {
-				cfg.Theme = value
-			}
-		case "super_roots":
-			if roots := parseRootList(value); len(roots) > 0 {
-				cfg.SuperRoots = roots
-			}
-		case "ignore_dirs":
-			cfg.IgnoreDirs = parseStringList(value)
-		case "include_dirs":
-			cfg.IncludeDirs = parseStringList(value)
+		switch section {
+		case "":
+			applyTopLevelKey(&cfg, key, value)
+		case "ai":
+			applyAIKey(&cfg.AI, key, value)
 		}
 	}
 	return cfg
+}
+
+func applyTopLevelKey(cfg *Config, key, value string) {
+	switch key {
+	case "max_width":
+		if n, err := strconv.Atoi(value); err == nil && n > 0 {
+			cfg.MaxWidth = n
+		}
+	case "code_max_width":
+		if n, err := strconv.Atoi(value); err == nil && n >= 0 {
+			cfg.CodeMaxWidth = n
+		}
+	case "center_above":
+		if n, err := strconv.Atoi(value); err == nil && n >= 0 {
+			cfg.CenterAbove = n
+		}
+	case "code_theme":
+		if value != "" {
+			cfg.CodeTheme = value
+		}
+	case "theme":
+		if value != "" {
+			cfg.Theme = value
+		}
+	case "super_roots":
+		if roots := parseRootList(value); len(roots) > 0 {
+			cfg.SuperRoots = roots
+		}
+	case "ignore_dirs":
+		cfg.IgnoreDirs = parseStringList(value)
+	case "include_dirs":
+		cfg.IncludeDirs = parseStringList(value)
+	}
+}
+
+func applyAIKey(ai *AIConfig, key, value string) {
+	switch key {
+	case "api_key":
+		ai.APIKey = value
+	case "fast_model":
+		if value != "" {
+			ai.FastModel = value
+		}
+	case "smart_model":
+		if value != "" {
+			ai.SmartModel = value
+		}
+	}
 }
 
 // parseRootList accepts a TOML-style array literal (`["~", "/Users/me/notes"]`)

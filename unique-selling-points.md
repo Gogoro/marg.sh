@@ -40,6 +40,10 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 
 - **The open file reloads itself when something else writes to it** (Claude Code in another tmux pane, a save from your IDE, a `git checkout`, etc.). marg watches the file via fsnotify; if your buffer is clean, the reload is silent. If you have unsaved changes it just flashes a warning instead of clobbering — you choose with `:e!` (discard) or `:w` (overwrite). Same idea as Neovim's `autoread`, on by default.
 
+## Reading mode that actually reads
+
+- **Markdown syntax collapses in reading mode, expands in edit mode.** `**bold**` reads as **bold**, `*italic*` as *italic*, `~~strike~~` as struck-through, `` `code` `` as code-styled text, and `[docs](https://example.com)` as just `docs` with a link underline. The moment you press `i` to edit, every marker reappears so you can see and fix the raw markdown. Cursoring onto a span in normal mode also expands that one span, so you can inspect or reach into a link's URL without leaving reading mode. Most TUI editors show the source as-is; marg leans on the modal split so the reading experience is clean and the edit experience is honest.
+
 ## Markdown-native edit shortcuts
 
 - **`*` / `_` / `` ` `` in visual mode wrap the selection in `**bold**`, `_italic_`, `` `code` ``.** No surround-plugin to install. The keys you'd reach for already do the right thing.
@@ -51,6 +55,7 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 ## Built for the dictation + AI workflow
 
 - **Designed to pair with Odett (speech-to-text).** Roadmap: pipe `odett ... | marg` straight into the buffer. Most editors treat dictation as an external paste; marg wants it as a first-class input.
+- **In-editor AI proofreading tuned for technical writing.** `:proof` runs the document through Claude Haiku and marks weak spots with a dotted underline that doesn't reflow the prose. Cursor over a mark and the suggestion reveals in the status bar; `]s` / `[s` walk between marks; `gA` / `gX` accept or reject. No sidebar, no popover, no "12 issues found!" panel — the page stays the page. Roadmap: paragraph-level idle checks and right-margin reveal at wide widths, putting suggestions where the program's name says they should live.
 
 ---
 

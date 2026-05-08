@@ -11,6 +11,7 @@ package marg
 type palette struct {
 	bg         string    // editor background (empty = terminal default)
 	fg         string    // body text foreground
+	boldFg     string    // **bold** text — picked to read distinctly on top of fg even when the terminal's bold-weight rendering is subtle
 	muted      string    // status bar, line numbers, blockquote text
 	dim        string    // very low-contrast accents (line gutters)
 	accent     string    // mode indicator, accent strokes — one accent only
@@ -33,6 +34,7 @@ type palette struct {
 var paletteDark = palette{
 	bg:     "", // honor the terminal background
 	fg:     "#cdd6f4",
+	boldFg: "#ffffff", // pure white so **bold** stands out even when the terminal's bold-weight rendering is weak
 	muted:  "#7f849c",
 	dim:    "#45475a",
 	accent: "#89b4fa",
@@ -60,6 +62,7 @@ var paletteDark = palette{
 var paletteLight = palette{
 	bg:     "#fdf6e3",
 	fg:     "#586e75",
+	boldFg: "#073642", // solarized base02 — clearly darker than fg
 	muted:  "#93a1a1",
 	dim:    "#eee8d5",
 	accent: "#268bd2",
@@ -87,6 +90,7 @@ var paletteLight = palette{
 var paletteSepia = palette{
 	bg:     "#f4ecd8",
 	fg:     "#5c4d3c",
+	boldFg: "#2a1f15", // deep coffee — clearly darker than fg on the cream bg
 	muted:  "#93826a",
 	dim:    "#c5b898",
 	accent: "#1f6feb",
