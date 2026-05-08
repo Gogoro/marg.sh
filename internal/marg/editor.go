@@ -100,6 +100,12 @@ type editor struct {
 	openTreeRequested bool
 	quitRequested     bool
 
+	// chatRequested is set when the user hit `K` in visual mode to open
+	// the AI chat overlay over the current selection. The app reads
+	// chatSelection on the same tick to seed the overlay.
+	chatRequested bool
+	chatSelection string
+
 	// transient one-shot status (e.g. "saved").
 	flash    string
 	flashGen int
@@ -658,6 +664,10 @@ func (e editor) updateVisual(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.wrapSelection("`")
 	case "_":
 		e.wrapSelection("_")
+	case "K":
+		e.chatSelection = e.selectionAsText()
+		e.chatRequested = true
+		e.mode = modeNormal
 	}
 
 	e.clampCursor()
@@ -1011,6 +1021,8 @@ func (e *editor) save() tea.Cmd {
 		e.flash = "no filename — use :w <path>"
 		return nil
 	}
+	formatTablesInBuffer(e.buf)
+	e.clampCursor()
 	data := []byte(e.buf.toString())
 	if err := os.WriteFile(e.filepath, data, 0o644); err != nil {
 		msg := "save failed: " + err.Error()
@@ -1322,6 +1334,24 @@ func (e *editor) selectionRange() (int, int, int, int) {
 	}
 	sr, sc, er, ec = normalizeRange(sr, sc, er, ec)
 	return sr, sc, er, ec
+}
+
+// selectionAsText returns the currently selected text as a single string.
+// Visual-line mode joins entire lines; visual char mode uses the inclusive
+// rune range. Returns "" when not in a visual mode.
+func (e *editor) selectionAsText() string {
+	if e.mode != modeVisual && e.mode != modeVisualLine {
+		return ""
+	}
+	sr, sc, er, ec := e.selectionRange()
+	if e.mode == modeVisualLine {
+		var parts []string
+		for r := sr; r <= er; r++ {
+			parts = append(parts, string(e.buf.line(r)))
+		}
+		return strings.Join(parts, "\n")
+	}
+	return e.buf.textRange(sr, sc, er, ec)
 }
 
 func (e *editor) yankSelection() {

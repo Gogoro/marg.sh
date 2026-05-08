@@ -2,6 +2,11 @@
 
 A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidian, Typora, Word) typically don't. Add to this list whenever something genuinely differentiating goes in.
 
+## (dump list of general points)
+- File auto-reload from disk when you read (if AI changed it behind the scenes)
+- Proof read with suggestions in the marg, quick and easy accept/decline. 
+- Select text, and chat with AI about it. Gives AI the entire page, and the highlighted section, so it knows the full context spesifically what you want to talk about.
+
 ## Prose-shaped, not code-shaped
 
 - **Soft-wrap that stops at the terminal width — and an optional `max_width` cap below that.** Almost every code-oriented TUI editor lets text run to the right edge of a wide monitor; marg is designed so paragraphs stay at a comfortable reading length even on a 200-column terminal. `max_width = 80` in config gives you Word-doc line lengths regardless of window size.
@@ -52,11 +57,13 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 - **List continuation on Enter** carries `-`, `*`, `+`, or auto-incremented numbered bullets, including `- [ ]` / `- [x]` checkbox items. Pressing Enter on an empty bullet exits the list cleanly. Standard in GUI editors; rare in TUIs.
 - **Hanging indent under the content of `- [ ]` checkbox items.** A wrapped todo continues under the text after the `]`, not under the dash — so long todos read as a single visual paragraph aligned to the content, the way Notion or a polished GUI editor does it.
 - **Frontmatter rendered as a calm block.** YAML frontmatter at the top of a file (`---` … `---`) renders with muted keys and body-color values, fences dimmed. So skill files, blog posts, and other markdown-with-frontmatter open with the metadata visually pushed back instead of competing with the content.
+- **Tables auto-format on save.** Save the file and every markdown table in it gets its columns padded to the widest cell, with the `:---` / `---:` / `:---:` alignment markers preserved. The on-disk file always reads as a clean grid — no need to install a `vim-table-mode` or run a formatter. Tables inside fenced code blocks are left alone so markdown-inside-markdown examples keep their shape.
 
 ## Built for the dictation + AI workflow
 
 - **Designed to pair with Odett (speech-to-text).** Roadmap: pipe `odett ... | marg` straight into the buffer. Most editors treat dictation as an external paste; marg wants it as a first-class input.
 - **In-editor AI proofreading tuned for technical writing.** `:proof` runs the document through Claude Haiku and marks weak spots with a dotted underline that doesn't reflow the prose. Cursor over a mark and the suggestion reveals in the status bar; `]s` / `[s` walk between marks; `gA` / `gX` accept or reject. No sidebar, no popover, no "12 issues found!" panel — the page stays the page. Roadmap: paragraph-level idle checks and right-margin reveal at wide widths, putting suggestions where the program's name says they should live.
+- **Highlight a passage, press `K`, ask Claude about it — without leaving the doc.** Visual-select any chunk and `K` opens an inline chat overlay over the page. The full document and the selected passage are sent in XML envelopes (`<document>` / `<selection>`), so Claude grounds its answer in your text, not generic advice. Multi-turn, esc to close. No app-switching, no copy-paste-into-ChatGPT context shuffle. Other editors push you to the AI sidebar; marg keeps the AI inside the prose.
 
 ---
 

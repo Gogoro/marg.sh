@@ -84,6 +84,11 @@ type app struct {
 	picker  picker
 	picking bool
 
+	// chat is the AI conversation overlay. chatting is true while it's
+	// shown; opening it is triggered by the editor's chatRequested flag.
+	chat     chat
+	chatting bool
+
 	// statusMessage is a transient line shown in the status bar (e.g. "saved").
 	statusMessage string
 
@@ -173,6 +178,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.editor.resize(a.width, a.editorContentHeight())
 		a.tree.resize(a.width, a.height-1)
 		a.picker.resize(a.width, a.height)
+		a.chat.resize(a.width, a.height)
 		return a, nil
 
 	case statusMsg:
@@ -230,11 +236,27 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.editor = a.editor.onProofResult(m)
 		return a, nil
 
+	case chatResultMsg:
+		a.chat = a.chat.onResult(m)
+		return a, nil
+
 	case quitMsg:
 		a.quitting = true
 		return a, tea.Quit
 
 	case tea.KeyMsg:
+		// Chat overlay takes priority when open.
+		if a.chatting {
+			next, cmd := a.chat.update(m)
+			a.chat = next
+			if a.chat.cancelled {
+				a.chatting = false
+				a.chat.cancelled = false
+				return a, nil
+			}
+			return a, cmd
+		}
+
 		// Picker takes priority when open.
 		if a.picking {
 			next, cmd := a.picker.update(m)
@@ -266,6 +288,15 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.editor.openTreeRequested = false
 				a.view = viewTree
 				a.tree.refresh()
+				return a, nil
+			}
+			if a.editor.chatRequested {
+				a.editor.chatRequested = false
+				selection := a.editor.chatSelection
+				a.editor.chatSelection = ""
+				a.chat = newChat(a.cfg.AI, a.editor.buf.toString(), selection, a.editor.filepath)
+				a.chat.resize(a.width, a.height)
+				a.chatting = true
 				return a, nil
 			}
 			if a.editor.quitRequested {
@@ -340,6 +371,9 @@ func (a app) View() string {
 
 	if a.picking {
 		out = a.picker.overlay(out)
+	}
+	if a.chatting {
+		out = a.chat.overlay(out)
 	}
 	return out
 }

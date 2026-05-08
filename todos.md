@@ -1,10 +1,22 @@
 # Todos
 
-- [ ] Keybinds
-  - [x] c+w for cutting out a word is dearly missed
-  - [x] g+d to jump to an link in the markdown. internal link jump to doc, external link opens browser
-- [x] Make links look nice. Only show the full part when having cursor over. I think this will make the docs a lot easier and nicer to read. (collapsed `[text](url)` to just the link-styled text; full markdown shows on cursor-over and in insert mode)
-- [x] Fix the searching in the cmd+p. It doesnt hit the most accurate file (replaced alphabetical sort with a fuzzy score that favors basename hits, contiguous runs, and start-of-basename matches)
+- [x] Auto-format markdown tables on save: pad each column to the widest cell, honor `:---` / `---:` / `:---:` alignment, skip tables inside fenced code blocks. See `internal/marg/tables.go`.
+  - [ ] Horizontal scroll for tables wider than the viewport. Today they wrap at `code_max_width`; for nvim-style "table flows off to the right", we'd need a real horizontal-scroll path in the renderer.
+
+- [~] Highlight a section and chat with an AI about it.
+  - [x] MVP: visual-select → `K` opens centered overlay. Sends full doc + selection in `<document>` / `<selection>` XML envelopes plus `<question>`. Multi-turn conversation, esc to dismiss. Uses `smart_model` from `[ai]` config. See `internal/marg/chat.go`.
+  - [x] Scrollback in the transcript. `↑` / `↓` scroll one line, `ctrl+u` / `ctrl+d` half-page, `pgup` / `pgdn` full page. Snaps back to tail when a new turn lands.
+  - [ ] Streaming responses (today the overlay shows "thinking…" and blocks until the full reply lands; for long answers this feels slow).
+  - [ ] Auto-attach supporting documents. Open question: should it be explicit (`@other-file.md` syntax in the input), implicit (follow markdown links from the current doc), or config-driven (a `context_dirs` list)? Pick one before building.
+  - [ ] Copy a reply (or part of a reply) back into the document. Today you read the answer and re-type or remember it. A `y` in a "browse-the-transcript" sub-mode could yank the focused message; or an `:apply` that drops it under the selection.
+  - [ ] Open the overlay without a selection (whole-doc question) — e.g. normal-mode `gK` or a `:ask` command.
+  - [ ] Multi-line input. Enter currently sends; sometimes a question wants a paragraph.
+  - [ ] Markdown rendering inside the transcript (today it's plain text — code blocks and bullets read flat).
+  - [ ] Cancel an in-flight request. Esc closes the overlay but the request keeps running in the background; the result is just dropped on arrival.
+  - [ ] Persist the conversation across opens for the same selection (or at least make it possible to reopen the last chat with `gK` or similar).
+  - [ ] Have the possibility to get edit suggests as well from the chat, that I can accept :o Huge boost. 
+
+- [ ] yank to clippboard y + " (i think, same as vim) 
 
 
 ## Ideas
