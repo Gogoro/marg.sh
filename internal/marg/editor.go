@@ -83,6 +83,11 @@ type editor struct {
 	// reg is the unnamed yank/delete register.
 	reg register
 
+	// selectedRegister is the register prefix queued by `"x` for the next
+	// yank/paste/delete. Currently we only honor `+` (and the equivalent
+	// `*`) which routes through the OS clipboard. 0 means "use reg".
+	selectedRegister byte
+
 	// Selection anchor for visual modes (the position v/V was pressed at).
 	anchorRow int
 	anchorCol int
@@ -105,6 +110,13 @@ type editor struct {
 	// chatSelection on the same tick to seed the overlay.
 	chatRequested bool
 	chatSelection string
+
+	// chatReopenRequested is set when the user hit `gK` in normal mode or
+	// ran `:ask` — open the chat overlay without a selection, reusing any
+	// existing conversation. chatAskQuestion, if non-empty, pre-fills the
+	// input and submits it as the first user turn.
+	chatReopenRequested bool
+	chatAskQuestion     string
 
 	// transient one-shot status (e.g. "saved").
 	flash    string
@@ -240,6 +252,7 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 			return e, nil
 		case pending == "y" && key == "y":
 			e.yankCurrentLine()
+			e.consumeRegisterForYank("1 line")
 			e.flash = "1 line yanked"
 			return e, nil
 		case pending == "c" && key == "w":
@@ -300,6 +313,14 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 			return e, nil
 		case pending == "g" && key == "d":
 			return e, e.followLinkAtCursor()
+		case pending == "g" && key == "K":
+			e.chatReopenRequested = true
+			return e, nil
+		case pending == `"`:
+			if key == "+" || key == "*" {
+				e.selectedRegister = '+'
+			}
+			return e, nil
 		}
 		// pending didn't match — fall through and handle key normally.
 	}
@@ -390,14 +411,19 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.pendingKey = "c"
 	case "y":
 		e.pendingKey = "y"
+	case `"`:
+		e.pendingKey = `"`
 	case "Y":
 		// Vim convention: Y yanks the current line (same as yy).
 		e.yankCurrentLine()
+		e.consumeRegisterForYank("1 line")
 		e.flash = "1 line yanked"
 	case "p":
+		e.preparePasteRegister()
 		e.pasteAfterCursor()
 		e.recordChange()
 	case "P":
+		e.preparePasteRegister()
 		e.pasteBeforeCursor()
 		e.recordChange()
 	case "u":
@@ -580,6 +606,13 @@ func (e editor) updateVisual(msg tea.KeyMsg) (editor, tea.Cmd) {
 			return e, nil
 		}
 	}
+	if e.pendingKey == `"` {
+		e.pendingKey = ""
+		if key == "+" || key == "*" {
+			e.selectedRegister = '+'
+		}
+		return e, nil
+	}
 
 	switch key {
 	case "esc":
@@ -637,10 +670,14 @@ func (e editor) updateVisual(msg tea.KeyMsg) (editor, tea.Cmd) {
 	// operators end the visual mode
 	case "y":
 		e.yankSelection()
+		e.consumeRegisterForYank("selection")
 		e.mode = modeNormal
 		e.flash = "yanked"
+	case `"`:
+		e.pendingKey = `"`
 	case "d", "x":
 		e.yankSelection()
+		e.consumeRegisterForYank("")
 		e.deleteSelection()
 		e.dirty = true
 		e.mode = modeNormal
@@ -759,6 +796,15 @@ func (e *editor) runCommand(cmd string) tea.Cmd {
 	if cmd == "proof!" {
 		e.suggestions = nil
 		e.flash = "suggestions cleared"
+		return nil
+	}
+	if cmd == "ask" {
+		e.chatReopenRequested = true
+		return nil
+	}
+	if strings.HasPrefix(cmd, "ask ") {
+		e.chatReopenRequested = true
+		e.chatAskQuestion = strings.TrimSpace(strings.TrimPrefix(cmd, "ask "))
 		return nil
 	}
 	e.flash = "unknown: :" + cmd
@@ -1334,6 +1380,44 @@ func (e *editor) selectionRange() (int, int, int, int) {
 	}
 	sr, sc, er, ec = normalizeRange(sr, sc, er, ec)
 	return sr, sc, er, ec
+}
+
+// consumeRegisterForYank routes the just-yanked text in e.reg to the OS
+// clipboard if the user prefixed the yank with `"+`. The register state
+// is reset after one operation so subsequent yanks go to the unnamed
+// register again. label is woven into the flash message ("clipboard:
+// 1 line") so the user gets confirmation.
+func (e *editor) consumeRegisterForYank(label string) {
+	if e.selectedRegister != '+' {
+		return
+	}
+	e.selectedRegister = 0
+	if err := setSystemClipboard(e.reg.text); err != nil {
+		e.flash = "clipboard: " + err.Error()
+		return
+	}
+	if label == "" {
+		e.flash = "→ clipboard"
+	} else {
+		e.flash = "→ clipboard (" + label + ")"
+	}
+}
+
+// preparePasteRegister loads the OS clipboard into e.reg when the user
+// prefixed the paste with `"+`. The paste itself then runs through the
+// regular register code path.
+func (e *editor) preparePasteRegister() {
+	if e.selectedRegister != '+' {
+		return
+	}
+	e.selectedRegister = 0
+	text, err := getSystemClipboard()
+	if err != nil {
+		e.flash = "clipboard: " + err.Error()
+		return
+	}
+	lineWise := strings.HasSuffix(text, "\n")
+	e.reg = register{text: strings.TrimRight(text, "\n"), lineWise: lineWise}
 }
 
 // selectionAsText returns the currently selected text as a single string.

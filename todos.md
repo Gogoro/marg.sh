@@ -6,17 +6,24 @@
 - [~] Highlight a section and chat with an AI about it.
   - [x] MVP: visual-select → `K` opens centered overlay. Sends full doc + selection in `<document>` / `<selection>` XML envelopes plus `<question>`. Multi-turn conversation, esc to dismiss. Uses `smart_model` from `[ai]` config. See `internal/marg/chat.go`.
   - [x] Scrollback in the transcript. `↑` / `↓` scroll one line, `ctrl+u` / `ctrl+d` half-page, `pgup` / `pgdn` full page. Snaps back to tail when a new turn lands.
-  - [ ] Streaming responses (today the overlay shows "thinking…" and blocks until the full reply lands; for long answers this feels slow).
-  - [ ] Auto-attach supporting documents. Open question: should it be explicit (`@other-file.md` syntax in the input), implicit (follow markdown links from the current doc), or config-driven (a `context_dirs` list)? Pick one before building.
-  - [ ] Copy a reply (or part of a reply) back into the document. Today you read the answer and re-type or remember it. A `y` in a "browse-the-transcript" sub-mode could yank the focused message; or an `:apply` that drops it under the selection.
-  - [ ] Open the overlay without a selection (whole-doc question) — e.g. normal-mode `gK` or a `:ask` command.
-  - [ ] Multi-line input. Enter currently sends; sometimes a question wants a paragraph.
+  - [x] Streaming responses. Replies render as they arrive, chunk by chunk, instead of blocking on a "thinking…" placeholder.
+  - [x] Cancel in-flight request. Esc cancels the streaming request via `context.WithCancel`, so closing the overlay no longer leaks a pending API call.
+  - [x] Persist the conversation across opens. `gK` (normal mode) or `:ask` reopens the previous chat; `K` (visual) starts fresh against the new selection.
+  - [x] Whole-doc question. `gK` opens chat with no selection; `:ask <text>` opens, pre-fills the question, and submits.
+  - [x] `@file.md` mentions in chat input attach the file's contents in an `<attachments>` block. Resolves relative to the current document, supports `~/` and absolute paths. Missing files are silently ignored.
+  - [x] Multi-line input. `alt+enter` / `shift+enter` / `ctrl+j` insert a newline; `enter` still sends. The input area grows up to 5 rows, transcript shrinks to fit.
+  - [x] Yank reply to clipboard. `ctrl+y` inside the chat copies the latest assistant reply to the OS clipboard.
+  - [x] Edit suggestions from chat. `ctrl+e` arms the next send for structured edits — model returns JSON, parsed into the proof pipeline, anchored on the buffer with the same `gA` / `gX` flow. The chat closes once the marks are live.
   - [ ] Markdown rendering inside the transcript (today it's plain text — code blocks and bullets read flat).
-  - [ ] Cancel an in-flight request. Esc closes the overlay but the request keeps running in the background; the result is just dropped on arrival.
-  - [ ] Persist the conversation across opens for the same selection (or at least make it possible to reopen the last chat with `gK` or similar).
-  - [ ] Have the possibility to get edit suggests as well from the chat, that I can accept :o Huge boost. 
+  - [ ] Refresh the document context on follow-up turns. Today only the first user turn carries `<document>`; if the doc changes mid-conversation the model still sees the original snapshot.
 
-- [ ] yank to clippboard y + " (i think, same as vim) 
+- [x] Yank/paste through the OS clipboard via `"+y` / `"+yy` / `"+p` / `"+P`. Visual-mode `"+y` copies the selection. Shells out to `pbcopy`/`pbpaste` (macOS) or `wl-copy`/`xclip`/`xsel` (Linux).
+
+- [ ] Table formating gets strange when its linkes inside. Because they get prettied to not have [](), so that needs a fix. Dynamic formating between view and edit view? or something? Maybe view mode is prettied with table format as well, but not stored witht those spaces in the real file. that the edit is the source of truth.
+
+- [ ] go to link, should work for links on page as well, for scroll to heading (#) links
+
+- [ ] Colors are still a bit anoying in the text/code blocks. In nvim its a lot lighter of a green for code blocks wihthout syntax, but we have a very dark green on a dark surface
 
 
 ## Ideas
@@ -27,10 +34,10 @@
 
 
 TUI
-- [ ] add more languages to the treesitter
-  - [ ] JSON
-  - [ ] Dockerfile
-  - [ ] TOML
-  - [ ] Lua
-  - [ ] HTML
-  - [ ] CSS
+- [~] add more languages to the treesitter
+  - [ ] JSON — no Go binding in `smacker/go-tree-sitter`; falls through to Chroma (which handles JSON cleanly already)
+  - [x] Dockerfile (basic: comments, strings, image specs, env/label keys, expansions — keywords like `FROM`/`RUN` aren't anonymous strings in this grammar, so they're not highlighted)
+  - [x] TOML
+  - [x] Lua (limited: no keyword highlighting because the grammar doesn't expose them as queryable anon strings — comments, strings, numbers, booleans, function names, identifiers all work)
+  - [x] HTML
+  - [x] CSS

@@ -9,11 +9,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/bash"
+	"github.com/smacker/go-tree-sitter/css"
+	"github.com/smacker/go-tree-sitter/dockerfile"
 	"github.com/smacker/go-tree-sitter/golang"
+	"github.com/smacker/go-tree-sitter/html"
 	"github.com/smacker/go-tree-sitter/javascript"
+	"github.com/smacker/go-tree-sitter/lua"
 	"github.com/smacker/go-tree-sitter/python"
 	"github.com/smacker/go-tree-sitter/rust"
 	"github.com/smacker/go-tree-sitter/sql"
+	"github.com/smacker/go-tree-sitter/toml"
 	"github.com/smacker/go-tree-sitter/typescript/typescript"
 	"github.com/smacker/go-tree-sitter/yaml"
 )
@@ -49,6 +54,11 @@ func init() {
 		loadTSLanguage("python", python.GetLanguage(), []string{"py", "py3", "python3"}, nil),
 		loadTSLanguage("bash", bash.GetLanguage(), []string{"sh", "shell", "zsh"}, nil),
 		loadTSLanguage("yaml", yaml.GetLanguage(), []string{"yml"}, nil),
+		loadTSLanguage("toml", toml.GetLanguage(), []string{"tml"}, nil),
+		loadTSLanguage("lua", lua.GetLanguage(), nil, nil),
+		loadTSLanguage("html", html.GetLanguage(), []string{"htm"}, nil),
+		loadTSLanguage("css", css.GetLanguage(), nil, nil),
+		loadTSLanguage("dockerfile", dockerfile.GetLanguage(), []string{"docker"}, nil),
 	}
 }
 

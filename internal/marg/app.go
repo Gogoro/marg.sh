@@ -236,8 +236,25 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.editor = a.editor.onProofResult(m)
 		return a, nil
 
-	case chatResultMsg:
-		a.chat = a.chat.onResult(m)
+	case chatStreamMsg:
+		next, cmd := a.chat.onStream(m)
+		a.chat = next
+		return a, cmd
+
+	case chatEditsMsg:
+		if m.err != nil {
+			a.chat.err = "couldn't parse edits: " + m.err.Error()
+			return a, nil
+		}
+		if len(m.raws) == 0 {
+			a.chat.err = "no edits suggested"
+			return a, nil
+		}
+		// Hand the edits over to the editor's proof pipeline so they
+		// render with the same inline marks and gA / gX flow, then close
+		// the overlay so the user sees the doc with the suggestions live.
+		a.editor = a.editor.onProofResult(proofResultMsg{suggestions: m.raws})
+		a.chatting = false
 		return a, nil
 
 	case quitMsg:
@@ -250,8 +267,14 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			next, cmd := a.chat.update(m)
 			a.chat = next
 			if a.chat.cancelled {
-				a.chatting = false
 				a.chat.cancelled = false
+				if a.chat.cancel != nil {
+					a.chat.cancel()
+					a.chat.cancel = nil
+					a.chat.streamCh = nil
+					a.chat.sending = false
+				}
+				a.chatting = false
 				return a, nil
 			}
 			return a, cmd
@@ -294,9 +317,37 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.editor.chatRequested = false
 				selection := a.editor.chatSelection
 				a.editor.chatSelection = ""
+				// Fresh K always replaces — new selection means a new
+				// conversation. Cancel any in-flight stream from a prior
+				// chat so we don't get stale chunks delivered.
+				if a.chat.cancel != nil {
+					a.chat.cancel()
+				}
 				a.chat = newChat(a.cfg.AI, a.editor.buf.toString(), selection, a.editor.filepath)
 				a.chat.resize(a.width, a.height)
 				a.chatting = true
+				return a, nil
+			}
+			if a.editor.chatReopenRequested {
+				a.editor.chatReopenRequested = false
+				question := a.editor.chatAskQuestion
+				a.editor.chatAskQuestion = ""
+				if len(a.chat.messages) == 0 {
+					a.chat = newChat(a.cfg.AI, a.editor.buf.toString(), "", a.editor.filepath)
+				} else {
+					// Refresh the document context for any future fresh
+					// chats. The current conversation keeps its history.
+					a.chat.document = a.editor.buf.toString()
+					a.chat.filepath = a.editor.filepath
+				}
+				a.chat.resize(a.width, a.height)
+				a.chatting = true
+				if question != "" {
+					a.chat.input = question
+					next, cmd := a.chat.update(tea.KeyMsg{Type: tea.KeyEnter})
+					a.chat = next
+					return a, cmd
+				}
 				return a, nil
 			}
 			if a.editor.quitRequested {
