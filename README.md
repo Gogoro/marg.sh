@@ -19,6 +19,11 @@
 
 ---
 
+## sloppy alpha
+
+The current version is 90% vibe-coded as a prototype to see if this kind of flow is actually something I want to commit to long-term. If it turns out that it is, I'll go through every line, clean it up, and make it a proper piece of software. I just want to be up-front about it so you know exactly what this is.
+
+
 ## why I built this
 
 I work in the terminal all day. Tmux and Neovim are my daily drivers and I love them both.
@@ -152,6 +157,7 @@ Fenced code blocks with an explicit language (e.g. ` ```go `) get full syntax hi
 | `r` *char*     | replace char under cursor with *char* |
 | `u` / `ctrl+r` | undo / redo                           |
 | `dd`           | cut (delete) current line             |
+| `cw`           | change word — cut to end of word, enter insert mode |
 | `yy` / `Y`     | yank (copy) current line              |
 | `p` / `P`      | paste after / before cursor (or below/above for line-wise) |
 | `v` / `V`      | visual / visual-line selection mode   |

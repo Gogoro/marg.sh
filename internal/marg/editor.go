@@ -204,6 +204,36 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 			e.yankCurrentLine()
 			e.flash = "1 line yanked"
 			return e, nil
+		case pending == "c" && key == "w":
+			line := e.buf.line(e.row)
+			if e.col >= len(line) {
+				return e, nil
+			}
+			end := e.col
+			// If on a word break, skip past whitespace first (matches `dw`/`cw`
+			// when the cursor sits on a space).
+			if isWordBreak(line[end]) {
+				for end < len(line) && isWordBreak(line[end]) {
+					end++
+				}
+			}
+			// Then skip across the word itself, stopping at the next break.
+			// Unlike `dw`, `cw` does NOT include trailing whitespace — that's
+			// the long-standing vim convention.
+			for end < len(line) && !isWordBreak(line[end]) {
+				end++
+			}
+			if end <= e.col {
+				return e, nil
+			}
+			// Snapshot must be taken BEFORE the deletion so a later esc
+			// records one undo step covering the whole `cw + typed text`.
+			e.insertSnapshot = e.captureSnapshot()
+			e.reg = register{text: e.buf.textRange(e.row, e.col, e.row, end-1), lineWise: false}
+			e.row, e.col = e.buf.deleteRange(e.row, e.col, e.row, end-1)
+			e.dirty = true
+			e.mode = modeInsert
+			return e, nil
 		case pending == "r":
 			if key == "esc" {
 				return e, nil
@@ -296,6 +326,8 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 		e.pendingKey = "r"
 	case "d":
 		e.pendingKey = "d"
+	case "c":
+		e.pendingKey = "c"
 	case "y":
 		e.pendingKey = "y"
 	case "Y":
