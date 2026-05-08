@@ -104,10 +104,15 @@ type editor struct {
 	flash    string
 	flashGen int
 
-	// AI proofreading state. suggestions are transient — never persisted —
-	// and dropped automatically when the line they anchor to no longer
-	// contains the original text. proofRunning is true while a `:proof`
-	// request is in flight, so we don't queue another one on top.
+	// AI proofreading state. proofItems is the canonical list received
+	// from the model — it doesn't move when the user edits. suggestions
+	// is the live, anchored view of that list against the current buffer
+	// — refreshed on every update() so the boxes track edits (insert,
+	// delete, paste). A proofItem with dismissed=true is hidden from
+	// anchoring without losing the underlying raw, so accept/reject
+	// don't have to surgically remove entries from the list.
+	// proofRunning is true while a `:proof` request is in flight.
+	proofItems   []proofItem
 	suggestions  []suggestion
 	proofRunning bool
 
@@ -149,6 +154,13 @@ func (e *editor) resize(w, h int) {
 
 func (e editor) update(msg tea.KeyMsg) (editor, tea.Cmd) {
 	e.flash = ""
+	// Refresh suggestion anchors against the live buffer before any
+	// handler reads them — this is what makes the proof boxes track the
+	// user's edits (delete, insert, paste). Cheap: anchoring scans lines
+	// for each item's `original` text, and the item list is small.
+	if len(e.proofItems) > 0 {
+		e.suggestions = anchorSuggestions(e.buf, e.proofItems)
+	}
 	var (
 		next editor
 		cmd  tea.Cmd
@@ -166,6 +178,12 @@ func (e editor) update(msg tea.KeyMsg) (editor, tea.Cmd) {
 		next, cmd = e.updateSearch(msg)
 	default:
 		return e, nil
+	}
+	// And re-anchor again on the post-handler buffer so the upcoming
+	// view() renders boxes against the latest edits made in this tick
+	// (insert mode keystrokes, paste, delete, accept replacements).
+	if len(next.proofItems) > 0 {
+		next.suggestions = anchorSuggestions(next.buf, next.proofItems)
 	}
 	if next.flash != "" {
 		next.flashGen++
@@ -274,6 +292,8 @@ func (e editor) updateNormal(msg tea.KeyMsg) (editor, tea.Cmd) {
 		case pending == "g" && key == "X":
 			e.rejectSuggestionAtCursor()
 			return e, nil
+		case pending == "g" && key == "d":
+			return e, e.followLinkAtCursor()
 		}
 		// pending didn't match — fall through and handle key normally.
 	}
@@ -860,15 +880,21 @@ func (e *editor) runProofread() tea.Cmd {
 	}
 }
 
-// onProofResult ingests the model's response, anchors each suggestion onto
-// the current buffer, and updates the status flash with the count or error.
+// onProofResult ingests the model's response, builds the canonical
+// proofItems list, anchors them against the current buffer, and updates
+// the status flash with the count or error. Subsequent edits re-anchor
+// from proofItems on each update() so suggestions track the buffer.
 func (e editor) onProofResult(m proofResultMsg) editor {
 	e.proofRunning = false
 	if m.err != nil {
 		e.flash = "proof failed: " + m.err.Error()
 		return e
 	}
-	e.suggestions = anchorSuggestions(e.buf, m.suggestions)
+	e.proofItems = make([]proofItem, 0, len(m.suggestions))
+	for _, r := range m.suggestions {
+		e.proofItems = append(e.proofItems, proofItem{raw: r})
+	}
+	e.suggestions = anchorSuggestions(e.buf, e.proofItems)
 	if len(e.suggestions) == 0 {
 		e.flash = "no suggestions"
 	} else {
@@ -930,9 +956,11 @@ func (e *editor) jumpToPrevSuggestion() {
 	e.flash = "wrapped to last suggestion"
 }
 
-// acceptSuggestionAtCursor replaces the cursor's suggestion with the model's
-// proposed text in the buffer, drops the suggestion, and re-anchors the
-// remaining suggestions on the same line in case offsets shifted.
+// acceptSuggestionAtCursor replaces the cursor's suggestion with the
+// model's proposed text and dismisses the corresponding proofItem.
+// All other suggestions are re-anchored against the new buffer state so
+// any that shifted (positions on the same line, suggestions on later
+// lines after a multi-char replacement) get fresh coordinates.
 func (e *editor) acceptSuggestionAtCursor() {
 	s := e.suggestionAtCursor()
 	if s == nil {
@@ -944,58 +972,37 @@ func (e *editor) acceptSuggestionAtCursor() {
 		return
 	}
 	row, startCol, endCol := s.row, s.startCol, s.endCol
+	itemIdx := s.itemIdx
 	replacement := s.replacement
 
 	e.buf.deleteRange(row, startCol, row, endCol-1)
 	e.row, e.col = e.buf.insertText(row, startCol, replacement)
 	e.dirty = true
 	e.recordChange()
-	e.removeSuggestionsOnRow(row)
-	e.reanchorRow(row)
+	if itemIdx >= 0 && itemIdx < len(e.proofItems) {
+		e.proofItems[itemIdx].dismissed = true
+	}
+	e.suggestions = anchorSuggestions(e.buf, e.proofItems)
 	e.flash = "accepted"
 	e.clampCursor()
 	e.scrollToCursor()
 }
 
-// rejectSuggestionAtCursor drops the current suggestion without changing
-// the buffer.
+// rejectSuggestionAtCursor dismisses the cursor's suggestion without
+// changing the buffer. The item stays in proofItems flagged dismissed
+// so anchoring skips it on every refresh.
 func (e *editor) rejectSuggestionAtCursor() {
 	s := e.suggestionAtCursor()
 	if s == nil {
 		e.flash = "no suggestion at cursor"
 		return
 	}
-	out := e.suggestions[:0]
-	for _, x := range e.suggestions {
-		if x.row == s.row && x.startCol == s.startCol && x.endCol == s.endCol {
-			continue
-		}
-		out = append(out, x)
+	if s.itemIdx >= 0 && s.itemIdx < len(e.proofItems) {
+		e.proofItems[s.itemIdx].dismissed = true
 	}
-	e.suggestions = out
+	e.suggestions = anchorSuggestions(e.buf, e.proofItems)
 	e.flash = "rejected"
 }
-
-// removeSuggestionsOnRow drops every suggestion anchored to a given row.
-// Used after an accept on that row, since the offsets of any other
-// suggestions on the same line may have shifted.
-func (e *editor) removeSuggestionsOnRow(row int) {
-	out := e.suggestions[:0]
-	for _, s := range e.suggestions {
-		if s.row == row {
-			continue
-		}
-		out = append(out, s)
-	}
-	e.suggestions = out
-}
-
-// reanchorRow re-resolves any raw-style suggestions on a given row by
-// searching the line for their `original` text. The MVP doesn't keep raw
-// suggestions around after anchoring, so this is currently a no-op
-// placeholder — accepts always drop the row's other suggestions in
-// removeSuggestionsOnRow above. Kept as a hook for Phase 2.
-func (e *editor) reanchorRow(row int) {}
 
 // --- save ---
 

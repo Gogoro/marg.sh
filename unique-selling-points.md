@@ -16,6 +16,7 @@ A running list of things marg does that other tools (Neovim, Vim, Helix, Obsidia
 - **`/` filter inside the file tree.** Live substring narrow over the whole tree (across all unexpanded folders too). Most terminal trees make you toggle into a separate "find file" command; in marg it's just `/`.
 - **VS Code-style fuzzy picker (`ctrl+p`) inside a TUI.** Centered modal, hierarchical sort, subsequence match. Most terminal editors make you install a plugin for this; in marg it's the default and the only file picker.
 - **One tool that opens nothing, a folder, or a single file.** `marg`, `marg ./notes`, `marg foo.md`, even `marg new-file.md` (creates it). No "set up a workspace first" step.
+- **`gd` follows the link under the cursor.** Internal markdown links (`[notes](./other.md)`) open the target file in the editor, resolved relative to the current document; external links (`https://…`, `mailto:…`) hand off to the system browser. Obsidian does this for internal links inside its app; in TUI editors you typically need a plugin or a custom keymap. In marg it's baked in.
 
 ## Keybindings that bridge two audiences
 

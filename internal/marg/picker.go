@@ -113,24 +113,88 @@ func (p *picker) applyQuery() {
 	q := strings.ToLower(strings.TrimSpace(p.query))
 	if q == "" {
 		p.view = append([]string{}, p.all...)
+		sort.Slice(p.view, func(i, j int) bool {
+			return strings.ToLower(p.view[i]) < strings.ToLower(p.view[j])
+		})
 	} else {
-		p.view = nil
+		type scored struct {
+			path  string
+			score int
+		}
+		var hits []scored
 		for _, path := range p.all {
 			candidate := strings.ToLower(p.displayPath(path))
-			if subsequenceMatch(candidate, q) {
-				p.view = append(p.view, path)
+			score, ok := fuzzyScore(candidate, q)
+			if !ok {
+				continue
 			}
+			hits = append(hits, scored{path: path, score: score})
+		}
+		// Higher score first; alphabetical as a stable tiebreaker so equal
+		// matches still feel orderly.
+		sort.SliceStable(hits, func(i, j int) bool {
+			if hits[i].score != hits[j].score {
+				return hits[i].score > hits[j].score
+			}
+			return strings.ToLower(hits[i].path) < strings.ToLower(hits[j].path)
+		})
+		p.view = nil
+		for _, h := range hits {
+			p.view = append(p.view, h.path)
 		}
 	}
-	sort.Slice(p.view, func(i, j int) bool {
-		return strings.ToLower(p.view[i]) < strings.ToLower(p.view[j])
-	})
 	if p.cursor >= len(p.view) {
 		p.cursor = len(p.view) - 1
 	}
 	if p.cursor < 0 {
 		p.cursor = 0
 	}
+}
+
+// fuzzyScore rates how well candidate matches query. Both are lowercased;
+// query is non-empty. Returns (score, true) if every rune of query
+// appears in candidate in order, and (0, false) otherwise.
+//
+// Scoring favors matches that fall in the basename, are contiguous with
+// the previous match, and land at the start of the basename. Path length
+// is a mild tiebreaker so a shorter path edges out a longer one when the
+// match quality is otherwise equal.
+func fuzzyScore(candidate, query string) (int, bool) {
+	cr := []rune(candidate)
+	qr := []rune(query)
+
+	baseStart := 0
+	for i, r := range cr {
+		if r == '/' {
+			baseStart = i + 1
+		}
+	}
+
+	score := 0
+	si := 0
+	prevMatch := -2
+	for _, qc := range qr {
+		for si < len(cr) && cr[si] != qc {
+			si++
+		}
+		if si >= len(cr) {
+			return 0, false
+		}
+		score += 10
+		if si >= baseStart {
+			score += 20
+		}
+		if si == baseStart {
+			score += 30
+		}
+		if si == prevMatch+1 {
+			score += 15
+		}
+		prevMatch = si
+		si++
+	}
+	score -= len(cr) / 4
+	return score, true
 }
 
 // displayPath returns the user-visible form of path: relative to root when
@@ -297,32 +361,6 @@ func relPath(root, path string) string {
 		return path
 	}
 	return r
-}
-
-// subsequenceMatch returns true if every rune of `query` appears in `s`
-// in order (not necessarily contiguous). Cheap fuzzy.
-func subsequenceMatch(s, query string) bool {
-	if query == "" {
-		return true
-	}
-	si := 0
-	sr := []rune(s)
-	qr := []rune(query)
-	for _, q := range qr {
-		found := false
-		for si < len(sr) {
-			if sr[si] == q {
-				si++
-				found = true
-				break
-			}
-			si++
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
 }
 
 func collectMarkdownFiles(root string) []string {

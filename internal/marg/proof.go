@@ -23,10 +23,14 @@ const (
 	kindStylistic
 )
 
-// suggestion is one proofreading note anchored to a single line of the buffer.
-// Multi-line spans are not supported in the MVP — those returned by the model
-// are silently dropped during anchoring.
+// suggestion is one proofreading note anchored to a single line of the
+// buffer at a given moment. The position is recomputed on every update
+// from the underlying proofItem so it tracks the user's edits.
+// itemIdx is the index back into the editor's proofItems slice — used
+// when accepting or rejecting so we know which underlying item to
+// dismiss without searching.
 type suggestion struct {
+	itemIdx     int
 	row         int
 	startCol    int
 	endCol      int
@@ -34,6 +38,15 @@ type suggestion struct {
 	replacement string
 	reason      string
 	kind        suggestionKind
+}
+
+// proofItem wraps a rawSuggestion with its in-session state. dismissed
+// means the user accepted or rejected this item; we keep it in the
+// list but skip it during anchoring so it stops appearing in boxes
+// without rebuilding the canonical list.
+type proofItem struct {
+	raw       rawSuggestion
+	dismissed bool
 }
 
 // rawSuggestion is what the model returns. Anchored to a buffer position
@@ -365,13 +378,23 @@ func wrapForBox(s string, width int) []string {
 	return out
 }
 
-// anchorSuggestions resolves each raw suggestion to a buffer position by
-// searching for its `original` text line by line. The first matching line
-// wins. A suggestion whose `original` cannot be found is silently dropped
-// — usually because the user edited the line after the request was sent.
-func anchorSuggestions(buf *buffer, raws []rawSuggestion) []suggestion {
+// anchorSuggestions resolves each non-dismissed proofItem to a buffer
+// position by searching for its `original` text line by line. First
+// matching line wins. An item whose `original` can't be found is
+// silently dropped from this anchored view — usually because the user
+// edited that line, or because anchoring runs after an accept that
+// replaced the original text.
+//
+// This is called on every editor update() against the live buffer so
+// that boxes follow inserts, deletes, and paste operations rather than
+// freezing at the row they had when :proof returned.
+func anchorSuggestions(buf *buffer, items []proofItem) []suggestion {
 	var out []suggestion
-	for _, r := range raws {
+	for i, it := range items {
+		if it.dismissed {
+			continue
+		}
+		r := it.raw
 		if r.Original == "" {
 			continue
 		}
@@ -384,6 +407,7 @@ func anchorSuggestions(buf *buffer, raws []rawSuggestion) []suggestion {
 			startCol := len([]rune(line[:idx]))
 			endCol := startCol + len([]rune(r.Original))
 			out = append(out, suggestion{
+				itemIdx:     i,
 				row:         row,
 				startCol:    startCol,
 				endCol:      endCol,

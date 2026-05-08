@@ -2,9 +2,9 @@
 
 - [ ] Keybinds
   - [x] c+w for cutting out a word is dearly missed
-  - [ ] g+d to jump to an link in the markdown. internal link jump to doc, external link opens browser
+  - [x] g+d to jump to an link in the markdown. internal link jump to doc, external link opens browser
 - [x] Make links look nice. Only show the full part when having cursor over. I think this will make the docs a lot easier and nicer to read. (collapsed `[text](url)` to just the link-styled text; full markdown shows on cursor-over and in insert mode)
-- [ ] Fix the searching in the cmd+p. It doesnt hit the most accurate file
+- [x] Fix the searching in the cmd+p. It doesnt hit the most accurate file (replaced alphabetical sort with a fuzzy score that favors basename hits, contiguous runs, and start-of-basename matches)
 
 
 ## Ideas
